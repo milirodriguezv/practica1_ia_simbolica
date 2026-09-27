@@ -1,0 +1,362 @@
+"""
+terrain.py
+----------
+Es el ENTORNO del ejercicio: el trozo de Marte por el que se mueve el
+rover (mismo papel que environment.py en el ejercicio 1).
+
+Contiene dos cosas:
+
+    1. El GENERADOR de terreno sintetico (memoria, "Generacion del
+       terreno"). Superpone tres componentes:
+           - relieve base: ruido gaussiano suavizado
+           - crateres: cuenco parabolico + borde elevado (ecuacion del crater)
+           - rocas: discos de celdas intransitables
+       Todo depende de una semilla, asi que el mismo (parametros, semilla)
+       produce siempre el mismo mapa.
+
+    2. La clase Terreno: la matriz de alturas H, la mascara de rocas y
+       las reglas FISICAS de movimiento, es decir, que movimientos son
+       factibles (memoria, "Factibilidad de un movimiento"):
+           (i)   la vecina esta dentro de la cuadricula
+           (ii)  la vecina no es roca
+           (iii) |pendiente del movimiento| <= THETA_MAX
+           (iv)  en diagonal, ninguna de las dos celdas de la esquina es roca
+
+El terreno NO sabe nada de costes, heuristicas ni algoritmos de
+busqueda: eso es cosa de problem.py, heuristics.py y search.py. Aqui
+solo esta "el mundo".
+"""
+
+import math
+from collections import deque
+from dataclasses import asdict, dataclass
+
+import numpy as np
+from parametros import DIRECCIONES, S_CELL, THETA_MAX
+from scipy.ndimage import gaussian_filter
+
+
+@dataclass
+class ParametrosGenerador:
+    """Controles de dificultad del generador (Tabla "Parametros del
+    generador de terreno" de la memoria). Las distancias van en metros
+    salvo que se indique 'celdas'."""
+
+    N: int = 200  # tamano de la cuadricula N x N
+    sigma_base: float = 10.0  # suavizado del relieve base [celdas]
+    amplitud_base: float = 1.0  # altura maxima del relieve base [m]
+    n_crateres: int = 12
+    radio_min: float = 4.0  # radio de los crateres [m]
+    radio_max: float = 20.0
+    rho_min: float = 0.10  # profundidad / diametro
+    rho_max: float = 0.20
+    eta: float = 0.2  # altura del borde, relativa a la profundidad
+    w: float = 0.3  # anchura del borde, relativa al radio
+    densidad_rocas: float = 0.004  # n_rocas = densidad * N^2
+    radio_roca_min: int = 1  # radio de cada roca [celdas], ya con margen
+    radio_roca_max: int = 2
+    separacion_min: float = 0.7  # |S - G| >= separacion_min * N * s
+    max_intentos: int = 50  # instancias a probar antes de rendirse
+
+
+# ---------------------------------------------------------------------
+#  Componentes del generador (funciones puras: rng + parametros -> array)
+# ---------------------------------------------------------------------
+
+
+def generar_relieve_base(rng, N, sigma, amplitud):
+    """Ruido blanco gaussiano suavizado con un filtro gaussiano y
+    reescalado para que su altura maxima (en valor absoluto) sea
+    'amplitud'. Da ondulaciones suaves del orden de metros."""
+    ruido = rng.normal(size=(N, N))
+    base = gaussian_filter(ruido, sigma=sigma, mode="reflect")
+    base -= base.mean()
+    return base * (amplitud / np.abs(base).max())
+
+
+def altura_crater(r, radio, profundidad, eta, w):
+    """Perfil de un crater en funcion de la distancia r a su centro
+    (ecuacion del crater en la memoria):
+
+        h(r) = -D * max(0, 1 - r^2/R^2)  +  eta * D * exp(-((r - R) / (w R))^2)
+               \\_____ cuenco ______/      \\______ borde elevado ______/
+    """
+    cuenco = -profundidad * np.maximum(0.0, 1.0 - r**2 / radio**2)
+    borde = eta * profundidad * np.exp(-(((r - radio) / (w * radio)) ** 2))
+    return cuenco + borde
+
+
+def generar_crateres(rng, N, s, p):
+    """Suma de n_crateres crateres de centro, radio y profundidad
+    aleatorios. Devuelve (alturas, lista con los datos de cada crater)."""
+    filas, columnas = np.indices((N, N))
+    alturas = np.zeros((N, N))
+    crateres = []
+
+    for _ in range(p.n_crateres):
+        ci, cj = rng.uniform(0, N, size=2)
+        radio = rng.uniform(p.radio_min, p.radio_max)
+        rho = rng.uniform(p.rho_min, p.rho_max)
+        profundidad = rho * 2 * radio
+
+        # La distancia r a cada celda, en metros, desde el centro del crater.
+        r = s * np.hypot(filas - ci, columnas - cj)
+        alturas += altura_crater(r, radio, profundidad, p.eta, p.w)
+        crateres.append(
+            {"centro": (ci, cj), "radio": radio, "rho": rho, "profundidad": profundidad}
+        )
+
+    return alturas, crateres
+
+
+def generar_rocas(rng, N, p):
+    """Mascara booleana de rocas: n_rocas discos de radio entero en
+    [radio_roca_min, radio_roca_max] celdas."""
+    filas, columnas = np.indices((N, N))
+    rocas = np.zeros((N, N), dtype=bool)
+    n_rocas = round(p.densidad_rocas * N * N)
+
+    for _ in range(n_rocas):
+        ci, cj = rng.integers(0, N, size=2)
+        radio = rng.integers(p.radio_roca_min, p.radio_roca_max + 1)
+        rocas |= (filas - ci) ** 2 + (columnas - cj) ** 2 <= radio**2
+
+    return rocas
+
+
+# ---------------------------------------------------------------------
+#  El entorno
+# ---------------------------------------------------------------------
+
+
+def _desplazar(matriz, di, dj, relleno):
+    """Devuelve M' con M'[i, j] = matriz[i + di, j + dj], o 'relleno'
+    si (i + di, j + dj) cae fuera de la cuadricula. Sirve para comparar
+    cada celda con su vecina en la direccion (di, dj) sin bucles."""
+    N, M = matriz.shape
+    resultado = np.full(matriz.shape, relleno, dtype=matriz.dtype)
+    resultado[max(0, -di) : N - max(0, di), max(0, -dj) : M - max(0, dj)] = matriz[
+        max(0, di) : N + min(0, di), max(0, dj) : M + min(0, dj)
+    ]
+    return resultado
+
+
+class Terreno:
+    def __init__(
+        self,
+        alturas,
+        rocas,
+        s=S_CELL,
+        theta_max=THETA_MAX,
+        inicio=None,
+        objetivo=None,
+        semilla=None,
+        crateres=None,
+    ):
+        self.alturas = np.asarray(alturas, dtype=float)
+        self.rocas = np.asarray(rocas, dtype=bool)
+        self.s = s
+        self.theta_max = theta_max
+        self.inicio = inicio
+        self.objetivo = objetivo
+        self.semilla = semilla
+        self.crateres = crateres or []
+
+        # Se precalcula, para cada una de las 8 direcciones, que celdas
+        # pueden moverse en esa direccion. Asi, preguntar por los vecinos
+        # de una celda (lo que hara la busqueda millones de veces) es
+        # solo una consulta a una tabla.
+        self._factible = self._calcular_factibilidad()
+
+    @property
+    def N(self):
+        return self.alturas.shape[0]
+
+    def dentro(self, celda):
+        i, j = celda
+        filas, columnas = self.alturas.shape
+        return 0 <= i < filas and 0 <= j < columnas
+
+    def es_transitable(self, celda):
+        return self.dentro(celda) and not self.rocas[celda]
+
+    def distancia_horizontal(self, di, dj):
+        """s (ortogonal) o s * sqrt(2) (diagonal)."""
+        return self.s * math.hypot(di, dj)
+
+    def pendiente(self, a, b):
+        """Pendiente CON SIGNO del movimiento a -> b [rad]:
+        positiva en subida, negativa en bajada."""
+        di, dj = b[0] - a[0], b[1] - a[1]
+        desnivel = self.alturas[b] - self.alturas[a]
+        return math.atan(desnivel / self.distancia_horizontal(di, dj))
+
+    def _calcular_factibilidad(self):
+        """Tabla booleana (8, N, N): factible[k, i, j] indica si desde
+        (i, j) se puede dar el paso DIRECCIONES[k] (reglas i-iv)."""
+        factible = np.zeros((len(DIRECCIONES),) + self.alturas.shape, dtype=bool)
+
+        for k, (di, dj) in enumerate(DIRECCIONES):
+            altura_vecina = _desplazar(self.alturas, di, dj, np.nan)  # nan = fuera (i)
+            roca_vecina = _desplazar(self.rocas, di, dj, True)
+
+            desnivel = altura_vecina - self.alturas
+            with np.errstate(invalid="ignore"):
+                pendiente = np.arctan(desnivel / self.distancia_horizontal(di, dj))
+                pendiente_ok = (
+                    np.abs(pendiente) <= self.theta_max
+                )  # (iii), nan -> False
+
+            ok = ~self.rocas & ~roca_vecina & pendiente_ok  # (ii)
+            if di != 0 and dj != 0:  # (iv)
+                ok &= ~_desplazar(self.rocas, di, 0, True)
+                ok &= ~_desplazar(self.rocas, 0, dj, True)
+            factible[k] = ok
+
+        return factible
+
+    def es_movimiento_factible(self, celda, di, dj):
+        if not self.dentro(celda):
+            return False
+        k = DIRECCIONES.index((di, dj))
+        return bool(self._factible[k][celda])
+
+    def movimientos_factibles(self, celda):
+        """Lista de (di, dj) factibles desde 'celda'. Es lo que usara
+        RoverProblem.actions()."""
+        i, j = celda
+        return [d for k, d in enumerate(DIRECCIONES) if self._factible[k, i, j]]
+
+    def vecinos_factibles(self, celda):
+        i, j = celda
+        return [(i + di, j + dj) for di, dj in self.movimientos_factibles(celda)]
+
+    def alcanzables_desde(self, origen):
+        """Matriz booleana con las celdas a las que se puede llegar desde
+        'origen' (busqueda en anchura). Como la factibilidad es simetrica
+        (|theta(a,b)| = |theta(b,a)|), 'b alcanzable desde a' equivale a
+        'a alcanzable desde b'. Solo se usa para validar instancias: aqui
+        no importa el coste, solo si existe camino."""
+        visitado = np.zeros(self.alturas.shape, dtype=bool)
+        if not self.es_transitable(origen):
+            return visitado
+
+        visitado[origen] = True
+        cola = deque([origen])
+        while cola:
+            celda = cola.popleft()
+            for vecina in self.vecinos_factibles(celda):
+                if not visitado[vecina]:
+                    visitado[vecina] = True
+                    cola.append(vecina)
+        return visitado
+
+    def mascara_pendiente_excesiva(self):
+        """Celdas desde las que al menos un paso supera THETA_MAX
+        (ignorando rocas). Solo para dibujar las paredes de los crateres."""
+        excesiva = np.zeros(self.alturas.shape, dtype=bool)
+        for di, dj in DIRECCIONES:
+            desnivel = _desplazar(self.alturas, di, dj, np.nan) - self.alturas
+            with np.errstate(invalid="ignore"):
+                excesiva |= np.abs(desnivel) > self.distancia_horizontal(
+                    di, dj
+                ) * math.tan(self.theta_max)
+        return excesiva
+
+    def resumen(self):
+        n_celdas = self.N * self.N
+        return (
+            f"Terreno {self.N}x{self.N} (s = {self.s} m, semilla = {self.semilla}) | "
+            f"alturas [{self.alturas.min():.1f}, {self.alturas.max():.1f}] m | "
+            f"rocas {self.rocas.sum() / n_celdas:.1%} | "
+            f"crateres {len(self.crateres)} | S = {self.inicio}, G = {self.objetivo}"
+        )
+
+
+# ---------------------------------------------------------------------
+#  Instancias completas: terreno + S + G
+# ---------------------------------------------------------------------
+
+
+def elegir_inicio_objetivo(terreno, rng, separacion_min, intentos=20):
+    """Elige S y G transitables, con |S - G| >= separacion_min * N * s y
+    G alcanzable desde S. Devuelve (S, G) o None si no lo consigue."""
+    distancia_min = separacion_min * terreno.N * terreno.s
+    transitables = np.argwhere(~terreno.rocas)
+    if len(transitables) == 0:
+        return None
+    filas, columnas = np.indices((terreno.N, terreno.N))
+
+    for _ in range(intentos):
+        inicio = tuple(int(x) for x in transitables[rng.integers(len(transitables))])
+        alcanzable = terreno.alcanzables_desde(inicio)
+        lejos = (
+            terreno.s * np.hypot(filas - inicio[0], columnas - inicio[1])
+            >= distancia_min
+        )
+        candidatos = np.argwhere(alcanzable & lejos)
+        if len(candidatos) > 0:
+            objetivo = tuple(int(x) for x in candidatos[rng.integers(len(candidatos))])
+            return inicio, objetivo
+
+    return None
+
+
+def generar_terreno(params=None, semilla=0):
+    """Genera una instancia completa y reproducible. Si no hay un par
+    (S, G) valido, regenera el mapa (con el mismo generador aleatorio,
+    asi que el resultado sigue dependiendo solo de la semilla)."""
+    p = params or ParametrosGenerador()
+    rng = np.random.default_rng(semilla)
+
+    for _ in range(p.max_intentos):
+        base = generar_relieve_base(rng, p.N, p.sigma_base, p.amplitud_base)
+        alturas_crateres, crateres = generar_crateres(rng, p.N, S_CELL, p)
+        rocas = generar_rocas(rng, p.N, p)
+
+        terreno = Terreno(
+            base + alturas_crateres, rocas, semilla=semilla, crateres=crateres
+        )
+        extremos = elegir_inicio_objetivo(terreno, rng, p.separacion_min)
+        if extremos is not None:
+            terreno.inicio, terreno.objetivo = extremos
+            return terreno
+
+    raise RuntimeError(
+        f"No se encontro una instancia valida en {p.max_intentos} intentos "
+        f"(semilla {semilla}); prueba menos rocas o crateres mas someros."
+    )
+
+
+# ---------------------------------------------------------------------
+#  Guardar / cargar (maps/*.npz) para que los experimentos sean reproducibles
+# ---------------------------------------------------------------------
+
+
+def guardar_terreno(terreno, ruta, params=None):
+    extra = {f"param_{k}": v for k, v in asdict(params).items()} if params else {}
+    np.savez_compressed(
+        ruta,
+        alturas=terreno.alturas,
+        rocas=terreno.rocas,
+        s=terreno.s,
+        theta_max=terreno.theta_max,
+        inicio=np.array(terreno.inicio),
+        objetivo=np.array(terreno.objetivo),
+        semilla=-1 if terreno.semilla is None else terreno.semilla,
+        **extra,
+    )
+
+
+def cargar_terreno(ruta):
+    datos = np.load(ruta)
+    semilla = int(datos["semilla"])
+    return Terreno(
+        datos["alturas"],
+        datos["rocas"],
+        s=float(datos["s"]),
+        theta_max=float(datos["theta_max"]),
+        inicio=tuple(int(x) for x in datos["inicio"]),
+        objetivo=tuple(int(x) for x in datos["objetivo"]),
+        semilla=None if semilla == -1 else semilla,
+    )
