@@ -1,182 +1,129 @@
 """
 DPLLSolver
 ----------
-Implementa DPLL (Davis-Putnam-Logemann-Loveland).
-Referencia: 02_Apuntes_de_Clase.md, seccion "Busqueda con backtracking
-(DPLL)".
+Implementa DPLL (Davis-Putnam-Logemann-Loveland), libro 4a ed. figura 7.17.
 
 Idea general del algoritmo, en 4 pasos, en este orden de prioridad:
-    1. Si con la asignacion actual ya se puede saber que TODO se
-       cumple, o que YA es imposible cumplirlo -> terminar aqui
-       (terminacion anticipada).
-    2. Si hay una clausula con un solo literal sin asignar, ese valor
-       esta obligado -> asignarlo (clausula unitaria).
+    1. Si ya no quedan clausulas, TODO se cumple; si alguna clausula se
+       ha quedado vacia, ya es imposible cumplirla (terminacion anticipada).
+    2. Si hay una clausula con un solo literal, ese valor esta obligado
+       -> asignarlo (clausula unitaria).
     3. Si una variable aparece siempre con el mismo signo en las
        clausulas que faltan -> asignarla directamente (simbolo puro).
-    4. Si no hay ningun atajo, elegir una variable libre y probar los
-       dos valores posibles. Si uno falla, probar el otro
+    4. Si no hay ningun atajo, elegir una variable y probar los dos
+       valores posibles. Si uno falla, probar el otro
        (ramificar + retroceder / backtracking).
+
+Cada vez que se asigna un literal, la formula se SIMPLIFICA: se quitan
+las clausulas que ya se cumplen y, de las demas, el literal contrario
+(que ya es falso). Asi los pasos 1-3 se leen directamente de las
+clausulas que quedan, sin recorrer la asignacion:
+    clausula vacia        -> conflicto
+    clausula de 1 literal -> unitaria
+    literal sin su negado -> simbolo puro
+En el paso 4 se ramifica por la variable que aparece en mas clausulas:
+es la que mas simplifica la formula, sea cual sea el valor que tome.
 
 El solver no sabe nada del dominio del problema (grafos, mapas, etc):
 solo trabaja con numeros (variables) y conjuntos de numeros (clausulas).
+
+Para los experimentos, los pasos 2 y 3 se pueden desactivar (ablacion)
+y cada llamada a solve() deja sus contadores en self.estadisticas.
 """
+
+import time
+from collections import Counter
+from dataclasses import dataclass
+
+
+@dataclass
+class Estadisticas:
+    llamadas: int = 0  # llamadas recursivas a _dpll
+    decisiones: int = 0  # valores probados al ramificar (paso 4)
+    propagaciones: int = 0  # asignaciones forzadas por clausula unitaria (paso 2)
+    simbolos_puros: int = 0  # asignaciones por simbolo puro (paso 3)
+    conflictos: int = 0  # veces que alguna clausula se queda vacia
+    retrocesos: int = 0  # valores probados que fallan y obligan a probar otro o volver atras
+    tiempo: float = 0.0  # segundos (perf_counter)
+
+
+def simplificar(clausulas, literal):
+    """Formula que queda al hacer 'literal' verdadero."""
+    resultado = []
+    for clausula in clausulas:
+        if literal in clausula:
+            continue  # ya se cumple
+        if -literal in clausula:
+            clausula = clausula - {-literal}  # ese literal ya es falso
+        resultado.append(clausula)
+    return resultado
 
 
 class DPLLSolver:
 
+    def __init__(self, usar_unitaria=True, usar_puro=True):
+        """
+        Args:
+            usar_unitaria: Aplicar la regla de la clausula unitaria (paso 2).
+            usar_puro: Aplicar la regla del simbolo puro (paso 3).
+        Con las dos a False queda el backtracking basico: sigue siendo
+        correcto (la ramificacion prueba todo), pero explora mas.
+        """
+        self.usar_unitaria = usar_unitaria
+        self.usar_puro = usar_puro
+        self.estadisticas = Estadisticas()
+
     def solve(self, clauses):
-        """Punto de entrada. Devuelve una asignacion que satisface
-        'clauses', o None si no existe ninguna (UNSAT)."""
-        variables = self._obtener_variables(clauses)
-        asignacion_inicial = {}
-        return self._dpll(clauses, variables, asignacion_inicial)
+        """Punto de entrada. Devuelve una asignacion (variable -> bool) que
+        satisface 'clauses', o None si no existe ninguna (UNSAT). Las
+        variables que no hacen falta pueden quedar sin asignar."""
+        self.estadisticas = Estadisticas()
+        inicio = time.perf_counter()
+        resultado = self._dpll([frozenset(c) for c in clauses], {})
+        self.estadisticas.tiempo = time.perf_counter() - inicio
+        return resultado
 
-    # ------------------------------------------------------------
-    # El algoritmo principal (recursivo)
-    # ------------------------------------------------------------
-    def _dpll(self, clauses, variables, assignment):
+    def _dpll(self, clausulas, asignacion):
+        self.estadisticas.llamadas += 1
 
-        estado = self._evaluar_clausulas(clauses, assignment)
-
-        if estado == "SATISFECHA":
-            return assignment
-
-        if estado == "CONTRADICCION":
+        # paso 1: terminacion anticipada
+        if not clausulas:
+            return asignacion
+        if any(len(c) == 0 for c in clausulas):
+            self.estadisticas.conflictos += 1
             return None
 
         # paso 2: clausula unitaria
-        forzado = self._buscar_clausula_unitaria(clauses, assignment)
-        if forzado is not None:
-            variable, valor = forzado
-            return self._dpll(clauses, variables, self._con_nueva_asignacion(assignment, variable, valor))
+        if self.usar_unitaria:
+            unitaria = next((c for c in clausulas if len(c) == 1), None)
+            if unitaria is not None:
+                self.estadisticas.propagaciones += 1
+                (literal,) = unitaria
+                return self._asignar(clausulas, asignacion, literal)
 
         # paso 3: simbolo puro
-        puro = self._buscar_simbolo_puro(clauses, assignment, variables)
-        if puro is not None:
-            variable, valor = puro
-            return self._dpll(clauses, variables, self._con_nueva_asignacion(assignment, variable, valor))
+        if self.usar_puro:
+            literales = {l for c in clausulas for l in c}
+            puro = next((l for l in literales if -l not in literales), None)
+            if puro is not None:
+                self.estadisticas.simbolos_puros += 1
+                return self._asignar(clausulas, asignacion, puro)
 
-        # paso 4: no hay atajos -> elegir variable y probar los 2 valores
-        variable_libre = self._elegir_variable_sin_asignar(variables, assignment)
-        if variable_libre is None:
-            return None  # no quedan variables y no se resolvio arriba
-
-        for valor in (True, False):
-            nueva_asignacion = self._con_nueva_asignacion(assignment, variable_libre, valor)
-            resultado = self._dpll(clauses, variables, nueva_asignacion)
+        # paso 4: ramificar por la variable mas frecuente
+        frecuencia = Counter(abs(l) for c in clausulas for l in c)
+        variable = frecuencia.most_common(1)[0][0]
+        for literal in (variable, -variable):
+            self.estadisticas.decisiones += 1
+            resultado = self._asignar(clausulas, asignacion, literal)
             if resultado is not None:
                 return resultado
+            self.estadisticas.retrocesos += 1
 
         return None  # las dos ramas fallaron -> conflicto, retroceder
 
-    def _con_nueva_asignacion(self, assignment, variable, valor):
-        # devuelve una COPIA de la asignacion con la variable nueva
-        # anadida (asi cada rama del arbol tiene su propia copia y no
-        # se pisan entre si)
-        nueva = dict(assignment)
-        nueva[variable] = valor
-        return nueva
-
-    # ------------------------------------------------------------
-    # Funciones auxiliares. Cada una hace una sola cosa.
-    # ------------------------------------------------------------
-    def _obtener_variables(self, clauses):
-        variables = set()
-        for clause in clauses:
-            for literal in clause:
-                variables.add(abs(literal))
-        return variables
-
-    def _valor_del_literal(self, literal, assignment):
-        # devuelve True, False, o None si la variable aun no esta asignada
-        variable = abs(literal)
-        if variable not in assignment:
-            return None
-        valor_variable = assignment[variable]
-        if literal > 0:
-            return valor_variable
-        return not valor_variable
-
-    def _evaluar_clausulas(self, clauses, assignment):
-        """Revisa TODAS las clausulas con la asignacion actual.
-        Devuelve "SATISFECHA", "CONTRADICCION" o "INDEFINIDA"."""
-        hay_alguna_sin_decidir = False
-
-        for clause in clauses:
-            clausula_cumplida = False
-            clausula_aun_posible = False
-
-            for literal in clause:
-                valor = self._valor_del_literal(literal, assignment)
-                if valor is True:
-                    clausula_cumplida = True
-                if valor is True or valor is None:
-                    clausula_aun_posible = True
-
-            if clausula_cumplida:
-                continue
-            if not clausula_aun_posible:
-                return "CONTRADICCION"
-            hay_alguna_sin_decidir = True
-
-        if hay_alguna_sin_decidir:
-            return "INDEFINIDA"
-        return "SATISFECHA"
-
-    def _buscar_clausula_unitaria(self, clauses, assignment):
-        for clause in clauses:
-            pendientes = []
-            clausula_cumplida = False
-
-            for literal in clause:
-                valor = self._valor_del_literal(literal, assignment)
-                if valor is True:
-                    clausula_cumplida = True
-                    break
-                if valor is None:
-                    pendientes.append(literal)
-
-            if clausula_cumplida:
-                continue
-
-            if len(pendientes) == 1:
-                literal_forzado = pendientes[0]
-                variable = abs(literal_forzado)
-                valor_forzado = literal_forzado > 0
-                return (variable, valor_forzado)
-
-        return None
-
-    def _buscar_simbolo_puro(self, clauses, assignment, variables):
-        signos_por_variable = {}
-
-        for clause in clauses:
-            clausula_cumplida = False
-            for literal in clause:
-                if self._valor_del_literal(literal, assignment) is True:
-                    clausula_cumplida = True
-                    break
-            if clausula_cumplida:
-                continue  # esta clausula ya no importa para el simbolo puro
-
-            for literal in clause:
-                variable = abs(literal)
-                if variable in assignment:
-                    continue
-                signo_positivo = literal > 0
-                if variable not in signos_por_variable:
-                    signos_por_variable[variable] = set()
-                signos_por_variable[variable].add(signo_positivo)
-
-        for variable, signos in signos_por_variable.items():
-            if len(signos) == 1:
-                unico_signo = list(signos)[0]
-                return (variable, unico_signo)
-
-        return None
-
-    def _elegir_variable_sin_asignar(self, variables, assignment):
-        for variable in variables:
-            if variable not in assignment:
-                return variable
-        return None
+    def _asignar(self, clausulas, asignacion, literal):
+        """Hace 'literal' verdadero y sigue con la formula simplificada.
+        La asignacion se copia, asi cada rama del arbol tiene la suya."""
+        nueva = dict(asignacion)
+        nueva[abs(literal)] = literal > 0
+        return self._dpll(simplificar(clausulas, literal), nueva)

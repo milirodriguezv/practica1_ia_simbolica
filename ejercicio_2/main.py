@@ -16,6 +16,11 @@ from ontologia import ONTOLOGIA
 from carta import CARTA
 import razonador
 
+# Los resultados usan simbolos de logica descriptiva (≡, ⊑, ⊓, ∀...). En
+# Windows la consola puede no estar en UTF-8 y print() fallaria con
+# UnicodeEncodeError, asi que se fuerza UTF-8 en la salida.
+sys.stdout.reconfigure(encoding="utf-8")
+
 CARPETA = "resultados"
 
 
