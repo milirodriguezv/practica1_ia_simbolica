@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pytest
 
-from heuristics import h0, h1, h2, ponderada
+from heuristics import h0, h1, h2
 from parametros import S_CELL, THETA_MAX, V_MAX
 from problem import RoverProblem, velocidad
 from terrain import ParametrosGenerador, generar_terreno
@@ -104,7 +104,3 @@ def test_consistencia_en_todas_las_aristas():
                 for h in (h1, h2):
                     assert h((i, j), p) <= c + h(b, p) + 1e-9
 
-
-def test_ponderada(mapa_4x4):
-    p = RoverProblem(mapa_4x4)
-    assert ponderada(h2, 1.5)((0, 1), p) == pytest.approx(1.5 * h2((0, 1), p))

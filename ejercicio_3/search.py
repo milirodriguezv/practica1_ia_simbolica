@@ -10,7 +10,6 @@ que aqui se escribe como f(n) = peso_g * g(n) + peso_h * h(n):
     UCS    ->       1       0      f(n) = g(n)
     Voraz  ->       0       1      f(n) = h(n)
     A*     ->       1       1      f(n) = g(n) + h(n)
-    A*_w   ->       1       w      f(n) = g(n) + w * h(n)
 
 Detalles que hay que respetar (guia, 6.2):
     - cola de prioridad con heapq, desempate por h menor
@@ -34,7 +33,7 @@ class ResultadoBusqueda:
     generados: int = 0
     expandidos: int = 0
     frontera_max: int = 0
-    tiempo: float = 0.0  # segundos de CPU del planificador
+    tiempo: float = 0.0  # segundos que tarda el planificador (perf_counter)
     orden_expansion: list = field(default_factory=list)  # para dibujar nodos expandidos
 
     @property
@@ -57,7 +56,7 @@ def best_first_search(problema, h, peso_g=1.0, peso_h=1.0):
         los contadores de nodos generados, expandidos, frontera maxima y
         tiempo.
     """
-    time_inicial = time.process_time()  # para medir tiempo de CPU
+    time_inicial = time.perf_counter()  # reloj de alta resolucion (process_time va a saltos de ~16 ms en Windows)
     S = problema.initial
     mejor_g = {S: 0}  # mejor coste g encontrado hasta ahora por cada nodo
     padre = {S: None}
@@ -79,7 +78,7 @@ def best_first_search(problema, h, peso_g=1.0, peso_h=1.0):
                 ruta.append(celda)
                 celda = padre[celda]
             ruta.reverse()
-            time_final = time.process_time() - time_inicial
+            time_final = time.perf_counter() - time_inicial
             return ResultadoBusqueda(
                 ruta=ruta,
                 coste=g,
@@ -102,7 +101,7 @@ def best_first_search(problema, h, peso_g=1.0, peso_h=1.0):
                 f_hijo = peso_g * g_hijo + peso_h * h_hijo
                 heapq.heappush(frontera, (f_hijo, h_hijo, contador, g_hijo, hijo))
 
-    time_final = time.process_time() - time_inicial
+    time_final = time.perf_counter() - time_inicial
     return ResultadoBusqueda(
         ruta=None,
         coste=float("inf"),
@@ -124,7 +123,7 @@ def greedy_search(problema, h):
     return best_first_search(problema, h, peso_g=0, peso_h=1)
 
 
-def astar_search(problema, h, w=1.0):
-    """A*: f = g + w * h. Con w = 1 y h admisible es optima; con w > 1
-    (A* ponderado) expande menos, y el coste es como mucho w veces el optimo."""
-    return best_first_search(problema, h, peso_g=1, peso_h=w)
+def astar_search(problema, h):
+    """A*: f = g + h. Con h admisible es optima; con h consistente, ademas,
+    ninguna celda se expande dos veces."""
+    return best_first_search(problema, h, peso_g=1, peso_h=1)

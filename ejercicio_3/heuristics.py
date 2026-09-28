@@ -9,7 +9,6 @@ terreno fuese llano y sin obstaculos:
     h0(n) = 0                          -> A* se convierte en UCS
     h1(n) = d_euclidea(n, G) / V_MAX   -> ademas, en linea recta (sin cuadricula)
     h2(n) = d_octil(n, G)    / V_MAX   -> con 8-conectividad
-    w * h(n)                           -> A* ponderado (no admisible si w > 1)
 
 h1 y h2 son admisibles y consistentes, y h2 >= h1 (memoria,
 Proposiciones 1-3). Firma comun: h(estado, problema).
@@ -38,7 +37,3 @@ def h2(estado, problema):
     dj = abs(estado[1] - problema.goal[1])
     return problema.terreno.s * (max(di, dj) + (math.sqrt(2) - 1) * min(di, dj)) / V_MAX
 
-
-def ponderada(heuristica, w):
-    """Devuelve la heuristica w * h (para el anadido A1)."""
-    return lambda estado, problema: w * heuristica(estado, problema)

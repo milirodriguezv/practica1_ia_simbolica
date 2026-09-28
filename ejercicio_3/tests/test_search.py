@@ -125,17 +125,6 @@ def test_voraz_nunca_mejora_el_optimo(semilla):
     comprobar_ruta(p, r)
 
 
-@pytest.mark.parametrize("semilla", SEMILLAS)
-@pytest.mark.parametrize("w", [1.5, 2, 5])
-def test_ponderado_cota_w(semilla, w):
-    """A1: con h admisible, A* ponderado cuesta como mucho w veces el optimo."""
-    p = RoverProblem(generar_terreno(PARAMS_PEQUENOS, semilla=semilla))
-    optimo = uniform_cost_search(p).coste
-    r = astar_search(p, h2, w=w)
-    assert optimo - 1e-9 <= r.coste <= w * optimo + 1e-9
-    comprobar_ruta(p, r)
-
-
 def test_consistente_no_reexpande():
     """Con h consistente la primera expansion de cada celda ya tiene su
     mejor g, asi que ninguna celda se expande dos veces."""
@@ -156,6 +145,14 @@ def test_b_estrella_arboles_exactos():
     assert factor_ramificacion_efectivo(5, 5) == pytest.approx(1.0, abs=1e-5)  # una sola rama
     assert factor_ramificacion_efectivo(3 + 9, 2) == pytest.approx(3.0, abs=1e-5)
     assert factor_ramificacion_efectivo(2 + 4 + 8, 3) == pytest.approx(2.0, abs=1e-5)
+
+
+def test_b_estrella_profundidad_grande():
+    """Rutas reales (d ~ 100, N ~ 10^4): no debe desbordar y debe cumplir
+    la ecuacion."""
+    b = factor_ramificacion_efectivo(10_000, 150)
+    assert 1 < b < 1.1
+    assert sum(b**i for i in range(1, 151)) == pytest.approx(10_000, rel=1e-3)
 
 
 def test_b_estrella_casos_limite():

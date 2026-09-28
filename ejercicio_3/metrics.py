@@ -37,9 +37,10 @@ def factor_ramificacion_efectivo(nodos_generados, profundidad, tolerancia=1e-6):
         """b + b^2 + ... + b^d (sin la raiz)."""
         return sum(b**i for i in range(1, d + 1))
 
-    # En b = 1 el arbol tiene d nodos (<= N) y en b = N tiene al menos N,
-    # asi que la solucion esta en [1, N]. nodos_arbol es creciente en b.
-    lo, hi = 1.0, float(max(N, 1))
+    # En b = 1 el arbol tiene d nodos (<= N) y en b = N^(1/d) tiene al
+    # menos b^d = N, asi que la solucion esta en [1, N^(1/d)]. nodos_arbol
+    # es creciente en b. (Con hi = N, b^d desborda para d grande.)
+    lo, hi = 1.0, N ** (1 / d)
     while hi - lo > tolerancia:
         medio = (lo + hi) / 2
         if nodos_arbol(medio) < N:
