@@ -1,0 +1,427 @@
+% =====================================================================
+%  EJERCICIO 3 - FASE 1: FORMALIZACIÓN EN PAPEL
+%  Heurísticas, demostraciones y ejemplo 4x4 resuelto a mano
+%
+%  Continúa "ej3_formalizacion.tex" (entorno, agente, formulación y
+%  modelo de coste). Mismas convenciones: plantilla IEEEtran, 2 columnas.
+%
+%  Preámbulo del documento principal (además de lo ya indicado en
+%  ej3_formalizacion.tex):
+%     \newtheorem{lema}{Lema}
+%     \newtheorem{proposicion}{Proposición}
+%     \newtheorem{corolario}{Corolario}
+%  Para las demostraciones se usa el entorno IEEEproof de IEEEtran
+%  (no hace falta amsthm; si lo cargas, cambia IEEEproof por proof).
+%
+%  Referencias nuevas (añadir a referencias.bib, al final del archivo).
+%
+%  BLOQUE C -> "4.1 Metodología", a continuación de "Modelo de coste".
+%  BLOQUE D -> ejemplo 4x4: material de trabajo y datos de los tests.
+%              En la memoria cabe como mucho un párrafo + la Tabla del mapa;
+%              el resto es para ti (y para test_search.py).
+% =====================================================================
+
+
+% =====================================================================
+%  BLOQUE C  ->  Metodología: heurísticas
+% =====================================================================
+
+\subsubsection{Heurísticas}
+\label{sec:ej3_heuristicas}
+
+Las heurísticas se obtienen por \emph{relajación del problema}: se eliminan
+restricciones y el coste óptimo del problema relajado se usa como
+estimación del coste real \cite{russell2022}. Para una celda $n = (i,j)$ y el
+objetivo $G = (i_G, j_G)$ se definen
+$\Delta_i = |i - i_G|$, $\Delta_j = |j - j_G|$,
+$M = \max(\Delta_i, \Delta_j)$ y $m = \min(\Delta_i, \Delta_j)$, y las
+distancias horizontales euclídea y octil:
+\begin{align}
+  D_E(n, G) &= s\sqrt{\Delta_i^2 + \Delta_j^2}, \label{eq:ej3_de}\\
+  D_O(n, G) &= s\big(M + (\sqrt{2} - 1)\,m\big). \label{eq:ej3_do}
+\end{align}
+Se estudian tres heurísticas (Tabla~\ref{tab:ej3_heuristicas}):
+\begin{equation}
+  h_0(n) = 0, \qquad
+  h_1(n) = \frac{D_E(n, G)}{v_{\max}}, \qquad
+  h_2(n) = \frac{D_O(n, G)}{v_{\max}}.
+  \label{eq:ej3_h}
+\end{equation}
+
+\begin{table}[t]
+  \centering
+  \caption{Heurísticas obtenidas por relajación}
+  \label{tab:ej3_heuristicas}
+  \footnotesize
+  \begin{tabular}{@{}lp{5.2cm}@{}}
+    \toprule
+    Heurística & Problema relajado \\
+    \midrule
+    $h_0$ & Ninguna información: A* equivale a UCS \\
+    $h_1$ & Sin relieve ni obstáculos, y movimiento libre en el plano
+            (en línea recta) a $v_{\max}$ \\
+    $h_2$ & Sin relieve ni obstáculos, pero conservando la
+            8-conectividad de la cuadrícula, a $v_{\max}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+El resultado central es que ambas heurísticas son admisibles y consistentes,
+y que $h_2$ domina a $h_1$. Las demostraciones se apoyan en tres lemas.
+
+\begin{lema}[Velocidad acotada]
+\label{lem:ej3_velocidad}
+Para toda pendiente factible, $|\theta| \le \theta_{\max}$, se cumple
+$(1 - k_{\mathrm{sub}})\,v_{\max} \le v(\theta) \le v_{\max}$, y
+$v(\theta) = v_{\max}$ solo si $\theta = 0$.
+\end{lema}
+\begin{IEEEproof}
+Si $0 \le \theta \le \theta_{\max}$, entonces
+$0 \le \theta/\theta_{\max} \le 1$ y, por~\eqref{eq:ej3_v},
+$v(\theta) = v_{\max}(1 - k_{\mathrm{sub}}\,\theta/\theta_{\max})
+\in [(1 - k_{\mathrm{sub}})v_{\max},\, v_{\max}]$, con el máximo solo en
+$\theta = 0$ porque $k_{\mathrm{sub}} > 0$. Si
+$-\theta_{\max} \le \theta < 0$, análogamente
+$v(\theta) \in [(1 - k_{\mathrm{baj}})v_{\max},\, v_{\max})$, y como
+$k_{\mathrm{baj}} < k_{\mathrm{sub}}$, el intervalo está contenido en el
+anterior.
+\end{IEEEproof}
+
+Con los valores de la Tabla~\ref{tab:ej3_param_fisicos},
+$v(\theta) \in [0{,}0084,\ 0{,}042]$~m/s. En particular, $v > 0$, por lo que el
+coste~\eqref{eq:ej3_coste} está bien definido. Obsérvese que la condición
+$v(\theta) \le v_{\max}$ también en bajada es imprescindible: si una bajada suave
+fuese más rápida que el llano, $h_1$ y $h_2$ dejarían de ser admisibles.
+
+\begin{lema}[Cotas del coste]
+\label{lem:ej3_cota_coste}
+Todo movimiento factible $a \to b$ cumple
+\begin{equation}
+  \frac{d_h(a,b)}{v_{\max}} \;\le\; c(a,b) \;\le\;
+  \frac{d_h(a,b)}{(1 - k_{\mathrm{sub}})\cos\theta_{\max}\; v_{\max}}.
+  \label{eq:ej3_cotas_coste}
+\end{equation}
+En particular, $c(a,b) \ge s / v_{\max} \approx 23{,}8$~s.
+\end{lema}
+\begin{IEEEproof}
+Por~\eqref{eq:ej3_d}, $d = \sqrt{d_h^2 + \Delta h^2} \ge d_h$, y por el
+Lema~\ref{lem:ej3_velocidad}, $v \le v_{\max}$; luego
+$c = d/v \ge d_h / v_{\max}$. Para la cota superior,
+$d = d_h / \cos\theta \le d_h / \cos\theta_{\max}$ y
+$v \ge (1 - k_{\mathrm{sub}})v_{\max}$. Por último, $d_h \ge s$.
+\end{IEEEproof}
+
+La cota superior indica cuánto puede llegar a infraestimar una heurística
+basada en $v_{\max}$: en el peor caso (subir a $\theta_{\max}$), el coste
+real es $1/(0{,}2 \cos 25^\circ) \approx 5{,}5$ veces el estimado. Cuanto
+más inclinado sea el terreno, menos informadas serán $h_1$ y $h_2$.
+
+\begin{lema}[Distancia octil]
+\label{lem:ej3_octil}
+En una cuadrícula 8-conexa sin obstáculos, la longitud horizontal del camino
+más corto entre dos celdas es su distancia octil $D_O$. Es decir, todo
+camino de 8-movimientos entre ellas cumple $\sum d_h \ge D_O$, y existe uno
+con igualdad.
+\end{lema}
+\begin{IEEEproof}
+Sea un camino con $a_i$ movimientos ortogonales en la dirección $i$, $a_j$ en
+la dirección $j$ y $b$ diagonales. Cada movimiento cambia cada coordenada en
+a lo sumo una unidad, así que $a_i + b \ge \Delta_i$ y
+$a_j + b \ge \Delta_j$. Supóngase, sin pérdida de generalidad,
+$\Delta_i = M$ y $\Delta_j = m$. La longitud es
+$L = s\,(a_i + a_j + \sqrt{2}\,b)$.
+\emph{Caso $b \ge m$:}
+$L/s \ge (a_i + b) + (\sqrt{2} - 1)b \ge M + (\sqrt{2} - 1)m$.
+\emph{Caso $b < m$:}
+$L/s \ge (M - b) + (m - b) + \sqrt{2}\,b = M + m - (2 - \sqrt{2})b
+> M + m - (2 - \sqrt{2})m = M + (\sqrt{2} - 1)m$.
+En ambos casos, $L \ge D_O$. La igualdad se alcanza con $m$ diagonales
+seguidos de $M - m$ ortogonales.
+\end{IEEEproof}
+
+\begin{corolario}
+\label{cor:ej3_octil}
+$D_O$ es la distancia de camino mínimo de un grafo, así que cumple la
+desigualdad triangular. Además, para celdas vecinas,
+$D_O(a,b) = d_h(a,b)$.
+\end{corolario}
+
+\begin{proposicion}[Admisibilidad]
+\label{prop:ej3_admisible}
+$h_0$, $h_1$ y $h_2$ son admisibles: $h(n) \le h^*(n)$ para toda celda $n$,
+siendo $h^*(n)$ el coste del camino óptimo de $n$ a $G$.
+\end{proposicion}
+\begin{IEEEproof}
+Si $G$ no es alcanzable desde $n$, $h^*(n) = \infty$ y no hay nada que
+probar. En otro caso, sea $n = x_0, x_1, \dots, x_k = G$ un camino óptimo.
+Por el Lema~\ref{lem:ej3_cota_coste},
+$h^*(n) = \sum_t c(x_t, x_{t+1}) \ge \frac{1}{v_{\max}} \sum_t d_h(x_t, x_{t+1})$.
+El camino es una secuencia de 8-movimientos (los obstáculos solo pueden
+alargarlo), luego, por el Lema~\ref{lem:ej3_octil},
+$\sum_t d_h \ge D_O(n,G)$ y, por tanto, $h^*(n) \ge h_2(n)$. Como
+$h_2 \ge h_1 \ge h_0$ (Proposición~\ref{prop:ej3_dominancia}), las tres son
+admisibles.
+\end{IEEEproof}
+
+\begin{proposicion}[Consistencia]
+\label{prop:ej3_consistente}
+$h_0$, $h_1$ y $h_2$ son consistentes: $h(G) = 0$ y, para todo movimiento
+factible $a \to b$, $h(a) \le c(a,b) + h(b)$.
+\end{proposicion}
+\begin{IEEEproof}
+Es inmediato que $h(G) = 0$ en los tres casos. Para $h_0$, la desigualdad es
+$0 \le c(a,b)$, cierta por el Lema~\ref{lem:ej3_cota_coste}. Para $h_2$, por el
+Corolario~\ref{cor:ej3_octil},
+$D_O(a,G) \le D_O(a,b) + D_O(b,G) = d_h(a,b) + D_O(b,G)$. Dividiendo por
+$v_{\max}$ y aplicando el Lema~\ref{lem:ej3_cota_coste},
+$h_2(a) \le d_h(a,b)/v_{\max} + h_2(b) \le c(a,b) + h_2(b)$. Para $h_1$,
+el razonamiento es el mismo con la desigualdad triangular de la distancia
+euclídea, ya que $D_E(a,b) = d_h(a,b)$ para celdas vecinas.
+\end{IEEEproof}
+
+\begin{proposicion}[Dominancia]
+\label{prop:ej3_dominancia}
+$h_2(n) \ge h_1(n)$ para toda celda $n$, con igualdad si y solo si $m = 0$
+o $M = m$ (el objetivo está en la misma fila, columna o diagonal).
+\end{proposicion}
+\begin{IEEEproof}
+Basta comparar los cuadrados de $D_O/s$ y $D_E/s$, ambos no negativos:
+\[
+  \big(M + (\sqrt{2}-1)m\big)^2 - (M^2 + m^2)
+  = 2(\sqrt{2}-1)\,m\,(M - m) \;\ge\; 0,
+\]
+porque $M \ge m \ge 0$. La expresión se anula si y solo si $m = 0$ o $M = m$.
+\end{IEEEproof}
+
+\textbf{Consecuencias.} De estos resultados y de la teoría de A*
+\cite{hart1968, russell2022} se derivan las predicciones que se contrastan
+en los experimentos:
+\begin{enumerate}
+  \item \emph{Optimalidad.} Con una heurística consistente, los valores de
+  $f = g + h$ no decrecen a lo largo de un camino y la primera vez que A*
+  (en su versión de búsqueda en grafo) expande un nodo ya conoce su coste
+  óptimo. Por tanto, UCS, A*$(h_1)$ y A*$(h_2)$ devuelven rutas del mismo
+  coste óptimo $C^*$.
+  \item \emph{Eficiencia.} A* con heurística consistente expande todo nodo
+  con $f(n) < C^*$ y ninguno con $f(n) > C^*$. Si $h_2 \ge h_1$, todo nodo
+  con $g^*(n) + h_2(n) < C^*$ cumple también $g^*(n) + h_1(n) < C^*$: A*$(h_2)$
+  nunca expande más nodos que A*$(h_1)$, salvo por desempates en
+  $f = C^*$. A su vez, ambas expanden como mucho los nodos de UCS
+  ($h_0 = 0$).
+  \item \emph{Calidad de $h_2$.} En un terreno llano y sin obstáculos, $h_2$
+  coincide con el coste real ($h_2 = h^*$), porque ese es precisamente el
+  problema relajado. Su precisión empeora con las pendientes (hasta un factor
+  $\approx 5{,}5$, Lema~\ref{lem:ej3_cota_coste}) y con los rodeos que
+  imponen rocas y cráteres. Se espera, por tanto, un factor de ramificación
+  efectivo $b^*$ mayor en los mapas más accidentados.
+  \item \emph{Búsqueda voraz} ($f = h_2$). No tiene en cuenta el coste
+  acumulado y no garantiza la optimalidad \cite{russell2022}; se espera que
+  expanda pocos nodos, pero que siga rutas más caras (por ejemplo, que cruce
+  cráteres someros en lugar de rodearlos).
+  \item \emph{A* ponderado} ($f = g + w\,h_2$, $w \ge 1$). $w\,h_2$ deja de
+  ser admisible, pero el coste de la solución cumple $C \le w\,C^*$
+  \cite{pohl1970}. Con una heurística consistente, la cota se mantiene aunque
+  no se reabran nodos ya expandidos \cite{likhachev2003}.
+\end{enumerate}
+
+Además de demostrarse, la admisibilidad y la consistencia se comprueban
+empíricamente sobre cada mapa de prueba. Se calcula $h^*(n)$ para todas las
+celdas con un único Dijkstra desde $G$ sobre el grafo \emph{invertido}
+(necesario porque el coste es asimétrico) y se verifican $h(n) \le h^*(n)$
+y $h(a) \le c(a,b) + h(b)$ en todas las aristas.
+
+
+% =====================================================================
+%  BLOQUE D  ->  Ejemplo 4x4 resuelto a mano
+%  (en la memoria: como mucho la Tabla del mapa y un párrafo con la
+%   asimetría; el resto es material de trabajo y datos de test)
+% =====================================================================
+
+\subsubsection{Ejemplo ilustrativo}
+\label{sec:ej3_ejemplo}
+
+La Tabla~\ref{tab:ej3_mapa4x4} muestra un mapa de $4 \times 4$ celdas
+($s = 1$~m) con una roca en $(1,2)$, inicio $S = (0,0)$ y objetivo
+$G = (3,3)$ (filas $i$ de arriba abajo, columnas $j$ de izquierda a derecha).
+Aunque es pequeño, reúne todas las situaciones del modelo.
+
+\begin{table}[t]
+  \centering
+  \caption{Mapa de alturas (m) del ejemplo $4\times 4$. $\blacksquare$: roca.
+  En negrita, la ruta óptima $S \to G$; subrayada, la ruta óptima $G \to S$.}
+  \label{tab:ej3_mapa4x4}
+  \footnotesize
+  \begin{tabular}{@{}c|cccc@{}}
+    $i \backslash j$ & 0 & 1 & 2 & 3 \\
+    \hline
+    0 & $\mathbf{0{,}0}^{S}$ & \underline{0,1} & \underline{0,2} & \underline{0,3} \\
+    1 & \textbf{0,2} & 1,2 & $\blacksquare$ & \underline{0,3} \\
+    2 & 0,4 & \textbf{0,5} & 0,5 & \underline{0,2} \\
+    3 & 0,5 & 0,6 & \textbf{0,3} & $\mathbf{0{,}0}^{G}$ \\
+  \end{tabular}
+\end{table}
+
+\textbf{Movimientos no factibles.}
+\begin{itemize}
+  \item \emph{Por pendiente} ($|\theta| > 25^\circ$): los cinco que entran o salen
+  de $(1,1)$ desde $(0,0)$ ($40{,}3^\circ$ en diagonal), $(0,1)$
+  ($47{,}7^\circ$), $(1,0)$ ($45{,}0^\circ$), $(2,0)$ ($29{,}5^\circ$ en diagonal) y
+  $(2,1)$ ($35{,}0^\circ$).
+  \item \emph{Por roca}: los ocho que entran en $(1,2)$.
+  \item \emph{Por la regla de la esquina}: las diagonales $(0,2){\leftrightarrow}(1,1)$,
+  $(0,2){\leftrightarrow}(1,3)$, $(1,1){\leftrightarrow}(2,2)$ y
+  $(1,3){\leftrightarrow}(2,2)$, que pasarían junto a la roca.
+\end{itemize}
+En consecuencia, la cima $(1,1)$ es transitable pero \emph{inalcanzable}: sus
+ocho movimientos son no factibles y $h^*(1,1) = \infty$. Esto ilustra por qué el
+generador comprueba la conectividad entre $S$ y $G$.
+
+\textbf{Cálculo del coste de un movimiento.} Para $(1,0) \to (2,1)$
+(diagonal, subida):
+$d_h = \sqrt{2} = 1{,}414$~m, $\Delta h = +0{,}3$~m,
+$\theta = \arctan(0{,}3/1{,}414) = 11{,}98^\circ$,
+$v = 0{,}042\,(1 - 0{,}8 \cdot 11{,}98/25) = 0{,}02590$~m/s,
+$d = \sqrt{2 + 0{,}09} = 1{,}4457$~m y
+$c = 1{,}4457/0{,}02590 = 55{,}81$~s.
+
+\begin{table}[t]
+  \centering
+  \caption{Costes de la ruta óptima $S \to G$}
+  \label{tab:ej3_ruta4x4}
+  \footnotesize
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Movimiento & $\Delta h$ (m) & $\theta$ ($^\circ$) & $v$ (m/s) & $c$ (s) & $g$ (s) \\
+    \midrule
+    $(0,0)\to(1,0)$ & $+0{,}2$ & $+11{,}31$ & 0,02680 & 38,05 & 38,05 \\
+    $(1,0)\to(2,1)$ & $+0{,}3$ & $+11{,}98$ & 0,02590 & 55,81 & 93,86 \\
+    $(2,1)\to(3,2)$ & $-0{,}2$ & $-8{,}05$  & 0,03659 & 39,03 & 132,90 \\
+    $(3,2)\to(3,3)$ & $-0{,}3$ & $-16{,}70$ & 0,03078 & 33,92 & \textbf{166,82} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Asimetría.} La ruta óptima $S \to G$ (Tabla~\ref{tab:ej3_ruta4x4})
+cruza el centro del mapa y cuesta $166{,}82$~s. La ruta óptima $G \to S$ es
+\emph{otra}: rodea por la columna 3 y la fila 0 y cuesta $170{,}14$~s.
+Recorrer la ruta de ida en sentido contrario costaría $171{,}42$~s, porque lo
+que antes eran bajadas ahora son subidas. Recíprocamente, usar la ruta de
+vuelta para ir costaría $167{,}63$~s, más que la óptima de ida. Es decir,
+$c(a,b) \neq c(b,a)$ hace que las rutas óptimas de ida y vuelta no coincidan.
+
+\begin{table}[t]
+  \centering
+  \caption{Heurísticas frente al coste real $h^*$ (s) en el ejemplo}
+  \label{tab:ej3_h4x4}
+  \footnotesize
+  \begin{tabular}{@{}lrrr|lrrr@{}}
+    \toprule
+    $n$ & $h_1$ & $h_2$ & $h^*$ & $n$ & $h_1$ & $h_2$ & $h^*$ \\
+    \midrule
+    (0,0) & 101,02 & 101,02 & 166,82 & (2,0) & 75,29 & 81,29 & 102,23 \\
+    (0,1) & 85,85  & 91,15  & 138,35 & (2,1) & 53,24 & 57,48 & 72,96 \\
+    (0,2) & 75,29  & 81,29  & 109,07 & (2,2) & 33,67 & 33,67 & 51,88 \\
+    (0,3) & 71,43  & 71,43  & 79,79  & (2,3) & 23,81 & 23,81 & 29,65 \\
+    (1,0) & 85,85  & 91,15  & 128,77 & (3,0) & 71,43 & 71,43 & 97,12 \\
+    (1,1) & 67,34  & 67,34  & $\infty$ & (3,1) & 47,62 & 47,62 & 67,84 \\
+    (1,3) & 47,62  & 47,62  & 55,98  & (3,2) & 23,81 & 23,81 & 33,92 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Heurísticas.} La Tabla~\ref{tab:ej3_h4x4} confirma las
+Proposiciones~\ref{prop:ej3_admisible}--\ref{prop:ej3_dominancia} en este
+mapa: $h_1 \le h_2 \le h^*$ en todas las celdas. $h_1 = h_2$ exactamente en
+las celdas alineadas con $G$ (misma fila, columna o diagonal), como predice la
+Proposición~\ref{prop:ej3_dominancia}. También se ha comprobado la
+consistencia en todas las aristas factibles.
+
+\begin{table}[t]
+  \centering
+  \caption{Traza de A*$(h_2)$ en el ejemplo (orden de expansión)}
+  \label{tab:ej3_traza4x4}
+  \footnotesize
+  \begin{tabular}{@{}rlrrr@{}}
+    \toprule
+    \# & Nodo & $g$ & $h_2$ & $f$ \\
+    \midrule
+    1  & (0,0) & 0,00   & 101,02 & 101,02 \\
+    2  & (0,1) & 29,28  & 91,15  & 120,43 \\
+    3  & (1,0) & 38,05  & 91,15  & 129,21 \\
+    4  & (0,2) & 58,56  & 81,29  & 139,85 \\
+    5  & (2,1) & 93,86  & 57,48  & 151,35 \\
+    6  & (2,2) & 117,67 & 33,67  & 151,35 \\
+    7  & (3,2) & 132,90 & 23,81  & 156,71 \\
+    8  & (2,0) & 76,11  & 81,29  & 157,40 \\
+    9  & (0,3) & 87,84  & 71,43  & 159,26 \\
+    10 & (1,3) & 111,65 & 47,62  & 159,26 \\
+    11 & (2,3) & 137,98 & 23,81  & 161,79 \\
+    12 & (3,3) & 166,82 & 0,00   & 166,82 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Traza de A*.} La Tabla~\ref{tab:ej3_traza4x4} recoge el orden de
+expansión de A*$(h_2)$. Los valores de $f$ no decrecen, como corresponde a
+una heurística consistente. Hay dos pares de nodos con el mismo $f$ (5--6 y
+9--10), porque el paso entre ellos es llano y va directo hacia $G$: su coste
+($23{,}81$~s) es exactamente lo que baja $h_2$, ya que en ese tramo el
+problema real coincide con el relajado. A*$(h_2)$ expande 12 nodos y UCS 14,
+es decir, todas las celdas alcanzables. En este mapa tan pequeño,
+A*$(h_1)$ también expande 12 nodos: la ventaja de $h_2$ sobre $h_1$ solo se
+aprecia en mapas grandes (experimento E2).
+
+
+% =====================================================================
+%  REFERENCIAS NUEVAS (añadir a referencias.bib)
+%  Verifica los datos antes de entregar.
+%
+%  @article{pohl1970,
+%    author  = {Pohl, Ira},
+%    title   = {Heuristic search viewed as path finding in a graph},
+%    journal = {Artificial Intelligence},
+%    volume  = {1}, number = {3--4}, pages = {193--204}, year = {1970}
+%  }
+%  @inproceedings{likhachev2003,
+%    author    = {Likhachev, Maxim and Gordon, Geoffrey and Thrun, Sebastian},
+%    title     = {{ARA*}: Anytime {A*} with provable bounds on sub-optimality},
+%    booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+%    volume    = {16}, year = {2003}
+%  }
+%  (hart1968 y russell2022 ya estaban en ej3_formalizacion.tex)
+% =====================================================================
+
+
+% =====================================================================
+%  RESUMEN PARA LA IMPLEMENTACIÓN (no se compila; datos para los pasos 2-4)
+%
+%  velocidad(theta):  0.2*V_MAX <= v <= V_MAX  (test: muestrear theta en
+%                     [-THETA_MAX, THETA_MAX]); v(0) == V_MAX
+%  action_cost:       c >= S_CELL/V_MAX = 23.8095 s siempre
+%  h1(n) = S_CELL*hypot(di, dj)/V_MAX
+%  h2(n) = S_CELL*(max(di,dj) + (sqrt(2)-1)*min(di,dj))/V_MAX
+%  Test h2 >= h1 en todas las celdas; igualdad si min==0 o max==min.
+%
+%  ---- MAPA 4x4 (test_search.py) ----
+%  H = [[0.0, 0.1, 0.2, 0.3],
+%       [0.2, 1.2, 0.6, 0.3],
+%       [0.4, 0.5, 0.5, 0.2],
+%       [0.5, 0.6, 0.3, 0.0]]
+%  rocas: solo (1, 2)        S = (0, 0)        G = (3, 3)
+%
+%  Coste de moverse (1,0)->(2,1) = 55.81 s ; (0,0)->(1,0) = 38.05 s
+%  Coste de moverse (1,0)->(0,0) = 29.65 s    (asimetría del mismo par)
+%  (1,1) sin movimientos factibles; (0,2)->(1,3) no factible (esquina)
+%
+%  Óptimo S->G: coste 166.8192, ruta (0,0) (1,0) (2,1) (3,2) (3,3)
+%  Óptimo G->S: coste 170.1446, ruta (3,3) (2,3) (1,3) (0,3) (0,2) (0,1) (0,0)
+%  Ruta de ida recorrida al revés: 171.4180 ; ruta de vuelta al revés: 167.6255
+%
+%  Expandidos (búsqueda en grafo, test objetivo al expandir,
+%  desempate por (f, h, orden de inserción)):
+%     UCS = 14,  A*(h1) = 12,  A*(h2) = 12
+%  g óptimo desde S: (0,1) 29.2786  (1,0) 38.0532  (0,2) 58.5572
+%     (2,0) 76.1063  (2,1) 93.8640  (0,3) 87.8359  (3,0) 105.3849
+%     (3,1) 121.9119 (1,3) 111.6454 (2,2) 117.6735 (3,2) 132.8980
+%     (2,3) 137.9798 (3,3) 166.8192
+% =====================================================================
