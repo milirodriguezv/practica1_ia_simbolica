@@ -8,3 +8,5 @@
 | SinLactosa ⊓ ∃contiene.Mozzarella | No | todo ingrediente de Mozzarella esta prohibido por SinLactosa |
 | SinGluten ⊓ ∃contiene.Cereal | Si | plato {Arroz} |
 | SinGluten ⊓ Vegetariano ⊓ SinLactosa ⊓ ∃contiene.Lacteo | Si | plato {Parmesano} |
+| Vegano ⊓ ∃contiene.Lacteo | No | todo ingrediente de Lacteo esta prohibido por Vegano |
+| Vegano ⊓ SinGluten ⊓ ∃contiene.Cereal | Si | plato {Arroz} |

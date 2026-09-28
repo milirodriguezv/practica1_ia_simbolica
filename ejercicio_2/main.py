@@ -10,6 +10,7 @@ Cada experimento imprime sus resultados y los guarda en resultados/EX.md
 
 import copy
 import os
+import random
 import sys
 
 from ontologia import ONTOLOGIA
@@ -148,6 +149,8 @@ def e4_consistencia():
         (["SinLactosa"], ["Mozzarella"]),
         (["SinGluten"], ["Cereal"]),
         (["SinGluten", "Vegetariano", "SinLactosa"], ["Lacteo"]),
+        (["Vegano"], ["Lacteo"]),
+        (["Vegano", "SinGluten"], ["Cereal"]),
     ]
 
     lineas = ["# E4. Consistencia de conceptos", ""]
@@ -185,12 +188,62 @@ def e5_auditoria():
     guardar("E5_auditoria", lineas)
 
 
+# ------------------------------------------------------------------
+# E6. Comprobacion de la subsuncion con platos aleatorios
+# ------------------------------------------------------------------
+def comprobar_subsunciones(n_platos=10000, semilla=0):
+    """Contrasta subsume() (que compara definiciones) con clasificar()
+    (que mira los ingredientes de cada plato) sobre platos aleatorios de
+    1 a 5 ingredientes atomicos:
+      - si C ⊑ D, ningun plato de C puede quedar fuera de D;
+      - si C no ⊑ D, deberia aparecer algun plato de C fuera de D.
+    Devuelve una fila por pareja (C, D)."""
+    rng = random.Random(semilla)
+    ingredientes = sorted(razonador.hojas(ONTOLOGIA))
+    carta = {"compuestos": {}, "platos": {}}
+
+    # Categorias de cada plato aleatorio
+    clasificados = []
+    for _ in range(n_platos):
+        componentes = rng.sample(ingredientes, rng.randint(1, 5))
+        carta["platos"]["Aleatorio"] = {"tipo": "Principal", "componentes": componentes,
+                                        "etiquetas_carta": []}
+        cumple, _ = razonador.clasificar("Aleatorio", ONTOLOGIA, carta)
+        clasificados.append(set(cumple))
+
+    filas = []
+    for r in razonador.jerarquia_categorias(ONTOLOGIA):
+        en_c = [cats for cats in clasificados if r["c"] in cats]
+        fuera_de_d = sum(1 for cats in en_c if r["d"] not in cats)
+        filas.append({"c": r["c"], "d": r["d"], "subsume": r["subsume"],
+                      "platos_en_c": len(en_c), "fuera_de_d": fuera_de_d,
+                      "coincide": r["subsume"] == (fuera_de_d == 0)})
+    return filas
+
+
+def e6_comprobacion(n_platos=10000):
+    lineas = ["# E6. Comprobacion de la subsuncion con platos aleatorios", ""]
+    lineas.append(f"{n_platos} platos aleatorios (1-5 ingredientes atomicos, semilla 0), "
+                  "clasificados uno a uno con clasificar().")
+    lineas.append("")
+    lineas.append("| C | D | Razonador: ¿C ⊑ D? | Platos en C | De ellos, fuera de D | ¿Coincide? |")
+    lineas.append("|---|---|---|---|---|---|")
+    filas = comprobar_subsunciones(n_platos)
+    for f in filas:
+        lineas.append(f"| {f['c']} | {f['d']} | {'Si' if f['subsume'] else 'No'} | "
+                      f"{f['platos_en_c']} | {f['fuera_de_d']} | {'Si' if f['coincide'] else 'NO'} |")
+    lineas.append("")
+    lineas.append(f"Coinciden {sum(f['coincide'] for f in filas)} de {len(filas)} parejas.")
+    guardar("E6_comprobacion", lineas)
+
+
 EXPERIMENTOS = {
     "E1": e1_clasificacion,
     "E2": e2_subsuncion,
     "E3": e3_ablacion,
     "E4": e4_consistencia,
     "E5": e5_auditoria,
+    "E6": e6_comprobacion,
 }
 
 

@@ -4,7 +4,8 @@
 
 A partir de los ingredientes de cada plato, el razonador **infiere** qué
 restricciones alimentarias cumple (SinGluten, Vegetariano, SinCarne,
-SinLactosa). Ninguna categoría se asigna a mano.
+SinLactosa, Vegano). Ninguna categoría se asigna a mano, y la jerarquía
+entre categorías (p. ej. Vegano ⊑ Vegetariano ⊑ SinCarne) tampoco: se infiere.
 
 Tareas de lógica descriptiva implementadas:
 
@@ -19,9 +20,9 @@ Tareas de lógica descriptiva implementadas:
 ## Ficheros
 
 - `ontologia.py` — TBox: taxonomía de ingredientes y definición de las categorías.
-- `carta.py` — ABox: ingredientes elaborados y los 8 platos de la carta.
+- `carta.py` — ABox: ingredientes elaborados y los 9 platos de la carta.
 - `razonador.py` — algoritmos (no contiene ningún plato ni ingrediente concreto).
-- `main.py` — experimentos E0–E5; guarda los resultados en `resultados/`.
+- `main.py` — experimentos E0–E6 (E6: comprobación de la subsunción con 10 000 platos aleatorios); guarda los resultados en `resultados/`.
 - `test_razonador.py` — tests.
 
 ## Cómo ejecutar

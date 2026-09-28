@@ -22,6 +22,7 @@ CLASIFICACION_ESPERADA = {
     "PizzaMozzarella": {"Vegetariano", "SinCarne"},
     "PastaCarbonara": set(),
     "EnsaladaRuculaPeraParmesano": {"SinGluten", "Vegetariano", "SinCarne", "SinLactosa"},
+    "EspaguetisAlPomodoro": {"Vegetariano", "SinCarne", "SinLactosa", "Vegano"},
     "SalmonConVerdurasAlHorno": {"SinGluten", "SinCarne", "SinLactosa"},
     "Tiramisu": {"Vegetariano", "SinCarne"},
     "HeladoDePistacho": {"SinGluten", "Vegetariano", "SinCarne"},
@@ -104,10 +105,19 @@ class TestSubsuncion(unittest.TestCase):
         # El contraejemplo es un pescado: cumple SinCarne pero no Vegetariano
         self.assertIn("Pescado", razonador.ancestros(contraejemplo, ONTOLOGIA))
 
-    def test_unica_subsuncion_inferida(self):
+    def test_subsunciones_inferidas(self):
+        """Vegano no se declara mas estricta que nada: se infiere."""
         positivas = {(r["c"], r["d"]) for r in razonador.jerarquia_categorias(ONTOLOGIA)
                      if r["subsume"]}
-        self.assertEqual(positivas, {("Vegetariano", "SinCarne")})
+        self.assertEqual(positivas, {("Vegetariano", "SinCarne"),
+                                     ("Vegano", "Vegetariano"),
+                                     ("Vegano", "SinCarne"),
+                                     ("Vegano", "SinLactosa")})
+
+    def test_vegano_no_subsume_a_singluten(self):
+        ok, contraejemplo = razonador.subsume("Vegano", "SinGluten", ONTOLOGIA)
+        self.assertFalse(ok)
+        self.assertIn("ConGluten", razonador.ancestros(contraejemplo, ONTOLOGIA))
 
     def test_contraejemplos_son_correctos(self):
         """Cada contraejemplo {h} cumple C y no cumple D."""
@@ -121,10 +131,25 @@ class TestSubsuncion(unittest.TestCase):
                 self.assertNotIn(r["d"], inferidas)
 
 
+class TestComprobacionAleatoria(unittest.TestCase):
+
+    def test_subsuncion_coincide_con_platos_aleatorios(self):
+        """E6 en pequeno: la subsuncion estructural coincide con lo que
+        dice clasificar() sobre platos aleatorios."""
+        from main import comprobar_subsunciones
+        for fila in comprobar_subsunciones(n_platos=2000, semilla=1):
+            with self.subTest(c=fila["c"], d=fila["d"]):
+                self.assertTrue(fila["coincide"])
+
+
 class TestConsistencia(unittest.TestCase):
 
     def test_vegetariano_con_pescado_es_insatisfacible(self):
         ok, _ = razonador.es_satisfacible(["Vegetariano"], ["Pescado"], ONTOLOGIA)
+        self.assertFalse(ok)
+
+    def test_vegano_con_lacteo_es_insatisfacible(self):
+        ok, _ = razonador.es_satisfacible(["Vegano"], ["Lacteo"], ONTOLOGIA)
         self.assertFalse(ok)
 
     def test_sinlactosa_con_lacteo_es_satisfacible(self):
@@ -148,6 +173,14 @@ class TestAuditoria(unittest.TestCase):
                      if d["tipo"] == "OMISION"}
         self.assertNotIn(("EnsaladaRuculaPeraParmesano", "SinCarne"), omisiones)
         self.assertIn(("SalmonConVerdurasAlHorno", "SinCarne"), omisiones)
+
+    def test_omision_de_vegano(self):
+        """Los espaguetis son veganos y la carta no lo dice. SinLactosa y
+        SinCarne no se reportan: Vegano ya las implica."""
+        discrepancias = razonador.auditar_carta(ONTOLOGIA, CARTA)
+        omisiones = {d["categoria"] for d in discrepancias
+                     if d["plato"] == "EspaguetisAlPomodoro" and d["tipo"] == "OMISION"}
+        self.assertEqual(omisiones, {"Vegano"})
 
 
 if __name__ == "__main__":
