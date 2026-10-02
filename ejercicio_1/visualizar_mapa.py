@@ -1,13 +1,13 @@
 """
 visualizar_mapa.py
 -------------------
-Dibuja el mapa de Australia con el coloreado que encontro el
+Dibuja un mapa (mapas.py) con el coloreado que encontro el
 LogicalAgent. No tiene nada que ver con la logica de SAT/DPLL -- es
 solo la parte grafica, totalmente separada (mismo principio de
 "cada cosa en su archivo" que venimos usando en todo el ejercicio).
 
-Las posiciones de las regiones son aproximadas, solo para que el
-dibujo se parezca a la disposicion real del mapa de Australia.
+Cada region es un circulo en su posicion aproximada y cada frontera,
+una linea gris entre dos circulos.
 """
 
 import matplotlib
@@ -15,52 +15,47 @@ matplotlib.use("Agg")  # para poder generar la imagen sin pantalla
 import matplotlib.pyplot as plt
 
 
-POSICIONES = {
-    "WA":  (0.0, 1.5),
-    "NT":  (1.3, 2.7),
-    "SA":  (1.6, 1.2),
-    "Q":   (2.8, 2.7),
-    "NSW": (2.9, 1.2),
-    "V":   (2.7, 0.2),
-    "T":   (3.0, -1.0),
-}
-
 COLOR_HEX = {
     "Rojo":  "#e74c3c",
     "Verde": "#2ecc71",
     "Azul":  "#3498db",
+    "Amarillo": "#f1c40f",
 }
 
 
-def dibujar_solucion(coloreado, adyacencias, titulo, nombre_archivo):
+def dibujar_solucion(coloreado, mapa, titulo, nombre_archivo, tamano=2200, margen=1.0):
     """
     coloreado: diccionario region -> nombre de color (ej: {"WA": "Rojo", ...})
                puede ser None si el problema fue UNSAT
-    adyacencias: lista de tuplas (region_a, region_b)
+    mapa:      diccionario de mapas.py (regiones, adyacencias, posiciones)
+    tamano:    area de cada circulo (puntos^2); margen: hueco alrededor
     """
-    figura, ejes = plt.subplots(figsize=(6, 6))
+    posiciones = mapa["posiciones"]
+    figura, ejes = plt.subplots(figsize=(6, 6) if tamano >= 1000 else (10, 6))
 
-    for region_a, region_b in adyacencias:
-        x1, y1 = POSICIONES[region_a]
-        x2, y2 = POSICIONES[region_b]
+    for region_a, region_b in mapa["adyacencias"]:
+        x1, y1 = posiciones[region_a]
+        x2, y2 = posiciones[region_b]
         ejes.plot([x1, x2], [y1, y2], color="gray", linewidth=1.5, zorder=1)
 
-    for region, (x, y) in POSICIONES.items():
+    for region, (x, y) in posiciones.items():
         if coloreado is None:
             color_hex = "#dddddd"
         else:
             nombre_color = coloreado.get(region)
             color_hex = COLOR_HEX.get(nombre_color, "#dddddd")
 
-        ejes.scatter([x], [y], s=2200, color=color_hex,
+        ejes.scatter([x], [y], s=tamano, color=color_hex,
                      edgecolors="black", linewidths=1.5, zorder=2)
         ejes.text(x, y, region, ha="center", va="center",
-                  fontsize=12, fontweight="bold", zorder=3)
+                  fontsize=12 if tamano >= 1000 else 7, fontweight="bold", zorder=3)
 
+    xs = [x for x, _ in posiciones.values()]
+    ys = [y for _, y in posiciones.values()]
+    ejes.set_xlim(min(xs) - margen, max(xs) + margen)
+    ejes.set_ylim(min(ys) - margen, max(ys) + margen)
     ejes.set_title(titulo, fontsize=14)
     ejes.axis("off")
-    ejes.set_xlim(-1, 4)
-    ejes.set_ylim(-2, 3.5)
 
     plt.tight_layout()
     plt.savefig(nombre_archivo, dpi=150)

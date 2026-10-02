@@ -150,6 +150,14 @@ CATEGORIAS = {
         "prohibidas": ["ConLactosa"],
         "formula": "PlatoValido ⊓ ∀contiene.¬ConLactosa",
     },
+    # Vegano prohibe todo lo animal. No hace falta declarar que es mas
+    # estricta que las demas: el razonador infiere Vegano ⊑ Vegetariano,
+    # Vegano ⊑ SinCarne y Vegano ⊑ SinLactosa (todo ConLactosa es Lacteo,
+    # y todo Lacteo es IngAnimal).
+    "Vegano": {
+        "prohibidas": ["IngAnimal"],
+        "formula": "PlatoValido ⊓ ∀contiene.¬IngAnimal",
+    },
 }
 
 # Todo junto en un diccionario para pasarlo al razonador

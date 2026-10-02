@@ -46,6 +46,14 @@ PLATOS = {
         "componentes": ["MasaPizza", "SalsaTomate", "Mozzarella", "Albahaca"],
         "etiquetas_carta": ["Vegetariano"],
     },
+    "EspaguetisAlPomodoro": {
+        "tipo": "Principal",
+        "componentes": ["Espaguetis", "SalsaTomate", "Albahaca"],
+        # La carta solo dice "Vegetariano": la auditoria (E5) debe avisar
+        # de que tambien es Vegano, pero no de SinCarne ni SinLactosa,
+        # que ya van implicadas por Vegano.
+        "etiquetas_carta": ["Vegetariano"],
+    },
     "PastaCarbonara": {
         "tipo": "Principal",
         "componentes": ["Espaguetis", "Guanciale", "HuevoGallina",
