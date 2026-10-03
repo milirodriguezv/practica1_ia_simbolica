@@ -14,11 +14,16 @@ aleatorias:
     estados_conflictivos  Por que EE. UU. no se puede pintar con 3
                           colores: se buscan los estados "culpables".
 
+    fuerza_bruta          Comprobacion: en Australia, que es pequena, se
+                          prueban todas las posibilidades una a una y se
+                          compara con lo que responde el agente.
+
 Los resultados se guardan en results/ (CSV) y figures/ (imagenes).
 Uso: python experimentos.py      (unos 3 minutos, casi todo en reglas_de_dpll)
 """
 
 import csv
+import itertools
 import sys
 from pathlib import Path
 
@@ -291,6 +296,83 @@ def estados_conflictivos():
     print("  guardado figures/estados_conflictivos.pdf")
 
 
+# ---------------------------------------------------------------------
+#  Comprobacion por fuerza bruta en Australia
+# ---------------------------------------------------------------------
+
+def contar_coloreados(mapa, n_colores):
+    """Cuenta los coloreados validos probando todas las combinaciones.
+
+    No usa clausulas ni el solver: asigna un color a cada region de todas
+    las formas posibles (n_colores ^ regiones) y mira las fronteras.
+
+    Args:
+        mapa: Diccionario de mapas.py (regiones, adyacencias).
+        n_colores: Numero de colores disponibles.
+
+    Returns:
+        Numero de coloreados en los que ninguna frontera une dos regiones
+        del mismo color.
+    """
+    regiones = mapa["regiones"]
+    validos = 0
+    for colores in itertools.product(range(n_colores), repeat=len(regiones)):
+        color_de = dict(zip(regiones, colores))
+        if all(color_de[a] != color_de[b] for a, b in mapa["adyacencias"]):
+            validos += 1
+    return validos
+
+
+def contar_modelos(clausulas, n_variables):
+    """Cuenta las asignaciones que satisfacen la formula probando las 2^n.
+
+    Args:
+        clausulas: Lista de clausulas (conjuntos de enteros).
+        n_variables: Numero de variables; se numeran de 1 a n.
+
+    Returns:
+        Numero de modelos de la formula.
+    """
+    clausulas = [tuple(c) for c in clausulas]
+    modelos = 0
+    for valores in itertools.product((False, True), repeat=n_variables):
+        if all(any(valores[abs(literal) - 1] == (literal > 0) for literal in clausula)
+               for clausula in clausulas):
+            modelos += 1
+    return modelos
+
+
+def fuerza_bruta():
+    """Compara la respuesta del agente con la fuerza bruta en Australia.
+
+    Para 2 y 3 colores se cuentan los coloreados validos del mapa y los
+    modelos de la formula. Si la traduccion a clausulas es correcta los
+    dos numeros coinciden, y el agente debe responder SAT exactamente
+    cuando son mayores que cero. Guarda results/fuerza_bruta.csv.
+    """
+    filas = []
+    for n_colores in (2, 3):
+        sat, entorno, agente = colorear(AUSTRALIA["regiones"], AUSTRALIA["adyacencias"], n_colores)
+        n_variables = len(entorno.variable_id)
+        coloreados = contar_coloreados(AUSTRALIA, n_colores)
+        modelos = contar_modelos(agente.kb.clauses, n_variables)
+        filas.append({
+            "mapa": "Australia",
+            "colores": n_colores,
+            "combinaciones_de_colores": n_colores ** len(AUSTRALIA["regiones"]),
+            "coloreados_validos": coloreados,
+            "variables": n_variables,
+            "asignaciones": 2 ** n_variables,
+            "modelos_de_la_formula": modelos,
+            "agente": "SAT" if sat else "UNSAT",
+            "coinciden": coloreados == modelos and sat == (coloreados > 0),
+        })
+        print(f"  Australia con {n_colores} colores: {coloreados} coloreados validos, "
+              f"{modelos} modelos de la formula ({2 ** n_variables} asignaciones probadas), "
+              f"el agente dice {'SAT' if sat else 'UNSAT'}")
+    guardar_csv(filas, "fuerza_bruta.csv")
+
+
 if __name__ == "__main__":
     print("--- Numero cromatico ---")
     numero_cromatico()
@@ -298,3 +380,5 @@ if __name__ == "__main__":
     reglas_de_dpll()
     print("\n--- Estados conflictivos de EE. UU. ---")
     estados_conflictivos()
+    print("\n--- Comprobacion por fuerza bruta (Australia) ---")
+    fuerza_bruta()

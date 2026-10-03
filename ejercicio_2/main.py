@@ -4,8 +4,9 @@ Uso:
     python main.py            -> ejecuta todos los experimentos
     python main.py auditoria  -> ejecuta solo ese experimento
 
-Experimentos: clasificacion, subsuncion, cambio_del_pecorino, consistencia,
-auditoria y menus_para_clientes. Antes de cualquiera se valida la ontologia.
+Experimentos: clasificacion, subsuncion, comprobacion_subsuncion,
+cambio_del_pecorino, consistencia, auditoria y menus_para_clientes. Antes
+de cualquiera se valida la ontologia.
 
 Cada uno imprime sus resultados y los guarda en resultados/<nombre>.md
 (la auditoria guarda ademas la figura resultados/auditoria.pdf).
@@ -128,6 +129,55 @@ def subsuncion():
     lineas.append("")
     lineas.append("Subsunciones inferidas: " + (", ".join(positivas) if positivas else "ninguna"))
     guardar("subsuncion", lineas)
+
+
+# Comprobacion de la subsuncion con platos de un solo ingrediente
+def comprobacion_subsuncion():
+    """Contrasta subsume() con la clasificacion de platos de un ingrediente.
+
+    subsume() compara las definiciones de dos categorias. Aqui se comprueba
+    lo mismo por otro camino: se clasifican los platos formados por un
+    unico ingrediente atomico (uno por cada hoja de la taxonomia) y se
+    mira si alguno esta en C y no en D.
+
+    Con un ingrediente basta. Un plato esta en una categoria cuando ninguno
+    de sus ingredientes esta prohibido, asi que si un plato cualquiera esta
+    en C y no en D es porque lleva algun ingrediente h prohibido por D y
+    permitido por C, y entonces el plato {h} tambien esta en C y no en D.
+    """
+    ingredientes = sorted(razonador.hojas(ONTOLOGIA))
+
+    # categorias de cada plato de un solo ingrediente
+    carta = {"compuestos": {}, "platos": {}}
+    categorias_de = {}
+    for ingrediente in ingredientes:
+        carta["platos"]["PlatoDeUnIngrediente"] = {"tipo": "Principal",
+                                                   "componentes": [ingrediente],
+                                                   "etiquetas_carta": []}
+        cumple, _ = razonador.clasificar("PlatoDeUnIngrediente", ONTOLOGIA, carta)
+        categorias_de[ingrediente] = cumple
+
+    lineas = ["# Comprobacion de la subsuncion con platos de un solo ingrediente", ""]
+    lineas.append(f"Se clasifican los {len(ingredientes)} platos de un unico ingrediente atomico.")
+    lineas.append("")
+    lineas.append("| C | D | Razonador: ¿C ⊑ D? | Platos en C | De ellos, fuera de D | ¿Coincide? |")
+    lineas.append("|---|---|---|---|---|---|")
+
+    coinciden = 0
+    resultados = razonador.jerarquia_categorias(ONTOLOGIA)
+    for r in resultados:
+        en_c = [i for i in ingredientes if r["c"] in categorias_de[i]]
+        fuera_de_d = [i for i in en_c if r["d"] not in categorias_de[i]]
+        # si C ⊑ D no puede haber ninguno fuera; si no, tiene que haber alguno
+        coincide = r["subsume"] == (len(fuera_de_d) == 0)
+        if coincide:
+            coinciden += 1
+        lineas.append(f"| {r['c']} | {r['d']} | {'Si' if r['subsume'] else 'No'} | "
+                      f"{len(en_c)} | {len(fuera_de_d)} | {'Si' if coincide else 'NO'} |")
+
+    lineas.append("")
+    lineas.append(f"Coinciden {coinciden} de {len(resultados)} parejas.")
+    guardar("comprobacion_subsuncion", lineas)
 
 
 # Que pasa si cambia la TBox: el Pecorino sin lactosa
@@ -363,6 +413,7 @@ def menus_para_clientes():
 EXPERIMENTOS = {
     "clasificacion": clasificacion,
     "subsuncion": subsuncion,
+    "comprobacion_subsuncion": comprobacion_subsuncion,
     "cambio_del_pecorino": cambio_del_pecorino,
     "consistencia": consistencia,
     "auditoria": auditoria,

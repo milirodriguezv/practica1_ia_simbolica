@@ -39,3 +39,4 @@ pytest tests             # tests
 | `numero_cromatico` | Menor número de colores con el que se puede pintar cada mapa | `results/numero_cromatico.csv` |
 | `reglas_de_dpll` | Llamadas recursivas con y sin cláusula unitaria y símbolo puro | `results/reglas_dpll.csv`, `figures/reglas_dpll.pdf` |
 | `estados_conflictivos` | Estados que impiden pintar EE. UU. con 3 colores | `results/estados_conflictivos.csv`, `figures/estados_conflictivos.pdf` |
+| `fuerza_bruta` | Comprobación en Australia: coloreados válidos y modelos de la fórmula contados uno a uno, frente a la respuesta del agente | `results/fuerza_bruta.csv` |

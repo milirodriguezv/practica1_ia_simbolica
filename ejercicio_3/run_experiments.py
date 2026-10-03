@@ -10,6 +10,8 @@ Cada uno escribe un CSV en results/ (una fila por busqueda):
                       (subir cuesta mas que bajar)
     pendiente_maxima  que pasa si el rover aguanta menos pendiente: si
                       sigue habiendo ruta y cuanto se alarga el viaje
+    referencia        comprobacion: coste de UCS, A*(h1) y A*(h2) frente al
+                      Dijkstra de networkx sobre el mismo grafo
 
 Dos tipos de terreno ("base" y "abrupto", ver params_para) para que haya
 variedad de pendientes. Todo depende de semillas fijas: volver a ejecutar
@@ -27,6 +29,7 @@ import math
 import time
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 
 from heuristics import h1, h2
@@ -269,6 +272,57 @@ def pendiente_maxima(n_mapas):
     guardar_csv(filas, "pendiente_maxima.csv")
 
 
+def coste_networkx(problema):
+    """Calcula el coste optimo de S a G con el Dijkstra de networkx.
+
+    Construye el grafo dirigido de todos los movimientos factibles del
+    terreno, con el tiempo de cada paso como peso. No usa search.py, asi
+    que sirve de referencia independiente.
+
+    Args:
+        problema: RoverProblem.
+
+    Returns:
+        Coste del camino mas corto de problema.initial a problema.goal.
+    """
+    grafo = nx.DiGraph()
+    terreno = problema.terreno
+    for i in range(terreno.N):
+        for j in range(terreno.N):
+            for accion in problema.actions((i, j)):
+                hijo = problema.result((i, j), accion)
+                grafo.add_edge((i, j), hijo, weight=problema.action_cost((i, j), accion, hijo))
+    return nx.dijkstra_path_length(grafo, problema.initial, problema.goal)
+
+
+def referencia(n_mapas):
+    """Compara el coste de los tres algoritmos optimos con el de networkx.
+
+    Usa los mismos mapas que el experimento voraz.
+
+    Args:
+        n_mapas: Mapas por tipo de terreno.
+    """
+    filas = []
+    for tipo in TIPOS_TERRENO:
+        for k in range(n_mapas):
+            semilla = 3000 + k
+            terreno = generar_terreno(params_para(tipo), semilla)
+            problema = RoverProblem(terreno)
+            coste_referencia = coste_networkx(problema)
+            for nombre, algoritmo in OPTIMOS.items():
+                r = algoritmo(problema)
+                filas.append({
+                    "terreno": tipo, "semilla": semilla, "algoritmo": nombre,
+                    "coste": r.coste, "coste_networkx": coste_referencia,
+                    "error_relativo": abs(r.coste - coste_referencia) / coste_referencia,
+                })
+            progreso(f"referencia, terreno {tipo}", k + 1, n_mapas)
+    guardar_csv(filas, "referencia_networkx.csv")
+    peor = max(f["error_relativo"] for f in filas)
+    print(f"  error relativo maximo frente a networkx: {peor:.2e}")
+
+
 # ---------------------------------------------------------------------
 
 
@@ -276,7 +330,8 @@ def main():
     """Lee los argumentos y ejecuta los experimentos pedidos."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("experimentos", nargs="*",
-                        default=["heuristicas", "voraz", "ida_y_vuelta", "pendiente_maxima"],
+                        default=["heuristicas", "voraz", "ida_y_vuelta", "pendiente_maxima",
+                                 "referencia"],
                         help="cuales ejecutar (por defecto, todos)")
     parser.add_argument("--rapido", action="store_true", help="pocos mapas, para probar el script")
     args = parser.parse_args()
@@ -287,6 +342,7 @@ def main():
         "voraz": lambda: voraz(n),
         "ida_y_vuelta": lambda: ida_y_vuelta(n),
         "pendiente_maxima": lambda: pendiente_maxima(n),
+        "referencia": lambda: referencia(n),
     }
     for nombre in args.experimentos:
         print(f"--- {nombre} ---")

@@ -33,6 +33,7 @@ python -m unittest test_razonador.py   # tests
 | `validacion` | Comprueba la ontología y la carta antes de razonar (se ejecuta siempre) | `resultados/validacion.md` |
 | `clasificacion` | Categorías que cumple cada plato, con la justificación de las que no | `resultados/clasificacion.md` |
 | `subsuncion` | Qué categorías están contenidas en otras, comparando sus definiciones | `resultados/subsuncion.md` |
+| `comprobacion_subsuncion` | Contrasta la subsunción clasificando los 50 platos de un solo ingrediente | `resultados/comprobacion_subsuncion.md` |
 | `cambio_del_pecorino` | Efecto de cambiar un axioma de la TBox sin tocar la carta | `resultados/cambio_del_pecorino.md` |
 | `consistencia` | Si puede existir un plato con ciertas combinaciones | `resultados/consistencia.md` |
 | `auditoria` | Etiquetas impresas en la carta frente a lo inferido | `resultados/auditoria.md`, `resultados/auditoria.pdf` |

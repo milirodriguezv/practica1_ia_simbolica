@@ -42,6 +42,9 @@ pytest tests                # tests
 | `ida_y_vuelta` | Coste de ir de S a G frente a volver de G a S | `results/ida_y_vuelta.csv`, `figures/ida_y_vuelta.pdf` |
 | `pendiente_maxima` | Si sigue habiendo ruta, y cuánto se alarga, cuando el rover aguanta menos pendiente | `results/pendiente_maxima.csv`, `figures/pendiente_maxima.pdf` |
 
+Además, `referencia` compara el coste de UCS, A*(h1) y A*(h2) con el del
+Dijkstra de NetworkX sobre el mismo grafo (`results/referencia_networkx.csv`).
+
 ## Reproducibilidad
 
 Todos los mapas dependen de los parámetros del generador y de una semilla: la

@@ -1,0 +1,3 @@
+mapa,colores,combinaciones_de_colores,coloreados_validos,variables,asignaciones,modelos_de_la_formula,agente,coinciden
+Australia,2,128,0,14,16384,0,UNSAT,True
+Australia,3,2187,18,21,2097152,18,SAT,True
