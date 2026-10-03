@@ -25,6 +25,7 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 from parametros import K_BAJ, K_SUB, THETA_MAX, V_MAX
 from problem import velocidad
@@ -35,7 +36,8 @@ RESULTADOS = CARPETA / "results"
 FIGURAS = CARPETA / "figures"
 
 COLOR = COLOR_ALGORITMO
-COLOR_TERRENO = {"base": "#c1440e", "abrupto": "#6a4c93"}
+# colores de los dos tipos de terreno (distintos de los de los algoritmos)
+COLOR_TERRENO = {"base": "#3d7ea6", "abrupto": "#8c5a3c"}
 NEUTRO = "#7a6f66"
 TINTA = "black"
 TERRENOS = {"base": "Terreno base", "abrupto": "Terreno abrupto"}
@@ -55,6 +57,23 @@ plt.rcParams.update({
     "lines.linewidth": 2,
     "legend.frameon": False,
 })
+
+
+def con_coma(numero, decimales=1):
+    """Escribe un numero con coma decimal, como en el texto de la memoria.
+
+    Args:
+        numero: Valor a escribir.
+        decimales: Numero de decimales.
+
+    Returns:
+        Cadena con el numero, p. ej. "0,96".
+    """
+    return f"{numero:.{decimales}f}".replace(".", ",")
+
+
+# para los ejes con decimales
+EJE_CON_COMA = FuncFormatter(lambda valor, posicion: con_coma(valor))
 
 
 def guardar(figura, nombre):
@@ -101,13 +120,14 @@ def fig_velocidad():
     ejes.plot(grados, v, color=COLOR["A* (h2)"])
     ejes.axvline(0, color="gray", linewidth=0.8)
     limite = math.degrees(THETA_MAX)
-    for g, texto in [(-limite, f"bajada: {1 - K_BAJ:.1f}·v_max"), (limite, f"subida: {1 - K_SUB:.1f}·v_max")]:
+    for g, texto in [(-limite, f"bajada: {con_coma(1 - K_BAJ)}·v_max"), (limite, f"subida: {con_coma(1 - K_SUB)}·v_max")]:
         valor = velocidad(math.radians(g)) / V_MAX
         ejes.plot(g, valor, "o", color=COLOR["A* (h2)"], markersize=6)
         ejes.annotate(texto, (g, valor), xytext=(0, -14), textcoords="offset points",
                       ha="left" if g < 0 else "right", fontsize=9)
     ejes.set_xlabel("pendiente θ (grados; > 0 sube)")
     ejes.set_ylabel("v(θ) / v_max")
+    ejes.yaxis.set_major_formatter(EJE_CON_COMA)
     ejes.set_ylim(0, 1.08)
     ejes.set_title("Velocidad del rover según la pendiente", fontsize=11, loc="left")
     guardar(figura, "velocidad_pendiente")
@@ -155,7 +175,6 @@ def fig_nodos_por_profundidad(heuristicas):
         ejes.set_title(titulo, fontsize=11, loc="left")
         ejes.set_xlim(right=ejes.get_xlim()[1] * 1.15)  # sitio para las etiquetas
     ejes_todos[0].set_ylabel("nodos expandidos (mediana, escala log)")
-    ejes_todos[0].legend(loc="lower right", fontsize=9)
     figura.suptitle("Nodos expandidos frente a la profundidad de la solución (banda: cuartiles 25–75 %)",
                     fontsize=11, x=0.01, ha="left")
     figura.tight_layout()
@@ -223,7 +242,8 @@ def fig_voraz(voraz):
             valores = media[columna_datos]
             ejes.barh(y, valores, color=colores, height=0.6)
             for yi, v in zip(y, valores):
-                ejes.annotate(formato.format(v).replace(",", " "), (v, yi), xytext=(4, 0),
+                texto = formato.format(v).replace(",", " ").replace(".", ",")
+                ejes.annotate(texto, (v, yi), xytext=(4, 0),
                               textcoords="offset points", va="center", fontsize=8, color=TINTA)
             ejes.set_yticks(y, orden if columna == 0 else [""] * len(orden))
             ejes.invert_yaxis()
@@ -253,9 +273,9 @@ def fig_ida_y_vuelta(ida_y_vuelta):
                      color=COLOR_TERRENO[tipo], edgecolor="white", linewidth=1, label="misma ruta a la vuelta")
         ejes.scatter(datos.desnivel_SG[~misma], datos.diferencia_pct[~misma], s=40, marker="^",
                      facecolor="white", edgecolor=COLOR_TERRENO[tipo], linewidth=1.5, label="ruta distinta")
-        ejes.set_title(f"{titulo}  (r = {r:.2f})", fontsize=11, loc="left")
+        ejes.set_title(f"{titulo}  (r = {con_coma(r, 2)})", fontsize=11, loc="left")
         ejes.set_xlabel("desnivel h(G) − h(S)  [m]")
-    ejes_todos[0].set_ylabel("coste ida / coste vuelta − 1  (%)")
+    ejes_todos[0].set_ylabel("coste de ida respecto a vuelta (%)")
     ejes_todos[0].legend(loc="upper left", fontsize=9)
     figura.suptitle("Ida y vuelta: ir a un punto más alto cuesta más que volver",
                     fontsize=11, x=0.01, ha="left")
@@ -308,6 +328,7 @@ def fig_pendiente_maxima(datos):
     izquierda.set_ylim(0, 105)
     izquierda.set_title("¿Se puede llegar a G?", fontsize=11, loc="left")
     derecha.set_ylabel("tiempo de viaje extra (%)")
+    derecha.yaxis.set_major_formatter(EJE_CON_COMA)
     derecha.set_title("Cuánto se alarga el viaje (mapas donde todos llegan)", fontsize=11, loc="left")
     izquierda.legend(loc="lower right", fontsize=9)
     figura.suptitle("Rovers que aguantan menos pendiente (mismos mapas, mismo S y G)",

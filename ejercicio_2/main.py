@@ -274,6 +274,20 @@ ROJO_TOMATE = "#c8332b"
 AMARILLO_ACEITE = "#d9a400"
 
 
+# Nombre de cada plato tal como se escribe en la carta (para la figura)
+NOMBRE_EN_LA_CARTA = {
+    "VitelTone": "Vitel toné",
+    "BurrataConTomatesConfitados": "Burrata con tomates",
+    "PizzaMozzarella": "Pizza mozzarella",
+    "EspaguetisAlPomodoro": "Espaguetis al pomodoro",
+    "PastaCarbonara": "Pasta carbonara",
+    "EnsaladaRuculaPeraParmesano": "Ensalada rúcula y pera",
+    "SalmonConVerdurasAlHorno": "Salmón con verduras",
+    "Tiramisu": "Tiramisú",
+    "HeladoDePistacho": "Helado de pistacho",
+}
+
+
 def dibujar_carta(discrepancias):
     """Dibuja la tabla platos x categorias de la auditoria.
 
@@ -311,7 +325,8 @@ def dibujar_carta(discrepancias):
     ejes.set_xlim(0, len(categorias))
     ejes.set_ylim(len(platos), 0)
     ejes.set_xticks([c + 0.5 for c in range(len(categorias))], categorias, fontsize=9)
-    ejes.set_yticks([f + 0.5 for f in range(len(platos))], platos, fontsize=8)
+    nombres = [NOMBRE_EN_LA_CARTA.get(plato, plato) for plato in platos]
+    ejes.set_yticks([f + 0.5 for f in range(len(platos))], nombres, fontsize=9)
     ejes.xaxis.tick_top()
     ejes.tick_params(length=0)
     for lado in ejes.spines.values():
