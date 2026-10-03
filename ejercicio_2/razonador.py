@@ -229,7 +229,7 @@ def subsume(c, d, onto):
     Supuesto (cierre del dominio): los unicos ingredientes posibles son las
     hojas declaradas en la TBox. Por eso la subsuncion es exacta respecto a
     esta ontologia: si se anade un ingrediente nuevo, el resultado puede
-    cambiar (se ve en la practica con el Arroz y el experimento E4).
+    cambiar (se ve en la practica con el Arroz y el experimento de consistencia).
 
     Devuelve (True, None) o (False, contraejemplo). El contraejemplo es un
     ingrediente h tal que el plato hipotetico {h} esta en C pero no en D.

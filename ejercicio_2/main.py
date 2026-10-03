@@ -3,15 +3,23 @@ Experimentos
 
 Uso:
     python main.py          -> ejecuta todos los experimentos
-    python main.py E3       -> ejecuta solo el experimento E3
+    python main.py auditoria  -> ejecuta solo ese experimento
 
-Cada experimento imprime sus resultados y los guarda en resultados/EX.md
+Experimentos: clasificacion, subsuncion, cambio_del_pecorino, consistencia,
+auditoria y menus_para_clientes. Antes de cualquiera se valida la ontologia.
+
+Cada uno imprime sus resultados y los guarda en resultados/<nombre>.md
+(la auditoria guarda ademas la figura resultados/auditoria.pdf).
 """
 
 import copy
 import os
-import random
 import sys
+
+import matplotlib
+matplotlib.use("Agg")  # para poder generar la imagen sin pantalla
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 from ontologia import ONTOLOGIA
 from carta import CARTA
@@ -35,9 +43,9 @@ def guardar(nombre, lineas):
         f.write(texto + "\n")
 
 
-# E0. Validacion de la ontologia
-def e0_validacion():
-    lineas = ["# E0. Validacion de la ontologia", ""]
+# Validacion de la ontologia
+def validacion():
+    lineas = ["# Validacion de la ontologia", ""]
     errores = razonador.validar_ontologia(ONTOLOGIA, CARTA)
     if len(errores) == 0:
         lineas.append(f"Ontologia valida: {len(ONTOLOGIA['taxonomia'])} clases, "
@@ -55,14 +63,14 @@ def e0_validacion():
         lineas.append("Se han encontrado errores:")
         for error in errores:
             lineas.append("- " + error)
-    guardar("E0_validacion", lineas)
+    guardar("validacion", lineas)
     return len(errores) == 0
 
 
-# E1. Clasificacion de la carta
-def e1_clasificacion():
+# Clasificacion de la carta
+def clasificacion():
     categorias = list(ONTOLOGIA["categorias"])
-    lineas = ["# E1. Clasificacion de la carta", ""]
+    lineas = ["# Clasificacion de la carta", ""]
 
     # Tabla plato x categoria
     lineas.append("| Plato | Tipo | " + " | ".join(categorias) + " |")
@@ -87,12 +95,12 @@ def e1_clasificacion():
     lineas.append("## Justificaciones (por que NO cumple)")
     lineas.append("")
     lineas = lineas + justificaciones
-    guardar("E1_clasificacion", lineas)
+    guardar("clasificacion", lineas)
 
 
-# E2. Subsuncion entre categorias
-def e2_subsuncion():
-    lineas = ["# E2. Subsuncion entre categorias (comparando definiciones)", ""]
+# Subsuncion entre categorias
+def subsuncion():
+    lineas = ["# Subsuncion entre categorias (comparando definiciones)", ""]
     lineas.append("| C | D | ¿C ⊑ D? | Contraejemplo |")
     lineas.append("|---|---|---|---|")
     positivas = []
@@ -108,12 +116,12 @@ def e2_subsuncion():
                   "ingrediente h que cumple C pero no D.")
     lineas.append("")
     lineas.append("Subsunciones inferidas: " + (", ".join(positivas) if positivas else "ninguna"))
-    guardar("E2_subsuncion", lineas)
+    guardar("subsuncion", lineas)
 
 
-# E3. Sensibilidad a la TBox (ablacion)
-def e3_ablacion():
-    lineas = ["# E3. Sensibilidad a la TBox", ""]
+# Que pasa si cambia la TBox: el Pecorino sin lactosa
+def cambio_del_pecorino():
+    lineas = ["# Cambio en la TBox: el Pecorino como queso sin lactosa", ""]
     lineas.append("Cambio: declarar el PecorinoRomano como queso curado "
                   "sin lactosa (quitar PecorinoRomano ⊑ ConLactosa).")
     lineas.append("")
@@ -136,11 +144,11 @@ def e3_ablacion():
     lineas.append("")
     lineas.append("La carta (ABox) es la misma: el cambio de clasificacion "
                   "viene solo del cambio en el conocimiento general (TBox).")
-    guardar("E3_ablacion", lineas)
+    guardar("cambio_del_pecorino", lineas)
 
 
-# E4. Consistencia de conceptos
-def e4_consistencia():
+# Consistencia de conceptos
+def consistencia():
     # (categorias, clases que el plato debe contener)
     consultas = [
         (["Vegetariano"], ["Pescado"]),
@@ -153,7 +161,7 @@ def e4_consistencia():
         (["Vegano", "SinGluten"], ["Cereal"]),
     ]
 
-    lineas = ["# E4. Consistencia de conceptos", ""]
+    lineas = ["# Consistencia de conceptos", ""]
     lineas.append("| Concepto | ¿Satisfacible? | Testigo / motivo |")
     lineas.append("|---|---|---|")
     for categorias, requiere in consultas:
@@ -164,14 +172,14 @@ def e4_consistencia():
             lineas.append(f"| {concepto} | Si | plato {{{', '.join(detalle)}}} |")
         else:
             lineas.append(f"| {concepto} | No | {detalle} |")
-    guardar("E4_consistencia", lineas)
+    guardar("consistencia", lineas)
 
 
 # ------------------------------------------------------------------
-# E5. Auditoria de la carta
+# Auditoria de la carta
 # ------------------------------------------------------------------
-def e5_auditoria():
-    lineas = ["# E5. Auditoria de las etiquetas de la carta", ""]
+def auditoria():
+    lineas = ["# Auditoria de las etiquetas de la carta", ""]
     discrepancias = razonador.auditar_carta(ONTOLOGIA, CARTA)
     if len(discrepancias) == 0:
         lineas.append("La carta coincide exactamente con lo inferido.")
@@ -185,71 +193,151 @@ def e5_auditoria():
         else:
             lineas.append(f"- [OMISION] {d['plato']} es {d['categoria']} "
                           "y la carta no lo indica")
-    guardar("E5_auditoria", lineas)
+    guardar("auditoria", lineas)
+    dibujar_carta(discrepancias)
+
+
+# Colores de la figura: verde albahaca si el plato cumple la categoria,
+# crema si no, borde rojo tomate para una etiqueta falsa y borde amarillo
+# (aceite) para una omision.
+VERDE_ALBAHACA = "#5b8c3a"
+CREMA = "#f3ecdc"
+ROJO_TOMATE = "#c8332b"
+AMARILLO_ACEITE = "#d9a400"
+
+
+def dibujar_carta(discrepancias):
+    """Tabla platos x categorias. El color de fondo es lo que infiere el
+    razonador y la palabra "carta" indica lo que dice la carta impresa."""
+    platos = list(CARTA["platos"])
+    categorias = list(ONTOLOGIA["categorias"])
+    figura, ejes = plt.subplots(figsize=(7.2, 4.6))
+
+    for fila, plato in enumerate(platos):
+        cumple, _ = razonador.clasificar(plato, ONTOLOGIA, CARTA)
+        for columna, categoria in enumerate(categorias):
+            color = VERDE_ALBAHACA if categoria in cumple else CREMA
+            ejes.add_patch(Rectangle((columna, fila), 1, 1, facecolor=color,
+                                     edgecolor="white", linewidth=2))
+            if categoria in CARTA["platos"][plato]["etiquetas_carta"]:
+                ejes.text(columna + 0.5, fila + 0.5, "carta", ha="center", va="center",
+                          fontsize=7, color="white" if categoria in cumple else "dimgray")
+
+    # recuadros sobre las celdas donde la carta y el razonador no coinciden
+    for d in discrepancias:
+        fila = platos.index(d["plato"])
+        columna = categorias.index(d["categoria"])
+        if d["tipo"] == "ETIQUETA FALSA":
+            borde, trazo = ROJO_TOMATE, "-"
+        else:
+            borde, trazo = AMARILLO_ACEITE, "--"
+        ejes.add_patch(Rectangle((columna + 0.05, fila + 0.05), 0.9, 0.9, fill=False,
+                                 edgecolor=borde, linestyle=trazo, linewidth=2.5))
+
+    ejes.set_xlim(0, len(categorias))
+    ejes.set_ylim(len(platos), 0)
+    ejes.set_xticks([c + 0.5 for c in range(len(categorias))], categorias, fontsize=9)
+    ejes.set_yticks([f + 0.5 for f in range(len(platos))], platos, fontsize=8)
+    ejes.xaxis.tick_top()
+    ejes.tick_params(length=0)
+    for lado in ejes.spines.values():
+        lado.set_visible(False)
+
+    leyenda = [
+        Rectangle((0, 0), 1, 1, facecolor=VERDE_ALBAHACA, label="cumple"),
+        Rectangle((0, 0), 1, 1, facecolor=CREMA, edgecolor="lightgray", label="no cumple"),
+        Rectangle((0, 0), 1, 1, fill=False, edgecolor=ROJO_TOMATE, linewidth=2, label="etiqueta falsa"),
+        Rectangle((0, 0), 1, 1, fill=False, edgecolor=AMARILLO_ACEITE, linestyle="--", label="omisión"),
+    ]
+    ejes.legend(handles=leyenda, loc="upper center", bbox_to_anchor=(0.45, -0.02),
+                ncol=4, fontsize=8, frameon=False)
+    figura.tight_layout()
+    figura.savefig(os.path.join(CARPETA, "auditoria.pdf"))
+    plt.close(figura)
 
 
 # ------------------------------------------------------------------
-# E6. Comprobacion de la subsuncion con platos aleatorios
+# Menus para clientes con restricciones
 # ------------------------------------------------------------------
-def comprobar_subsunciones(n_platos=10000, semilla=0):
-    """Contrasta subsume() (que compara definiciones) con clasificar()
-    (que mira los ingredientes de cada plato) sobre platos aleatorios de
-    1 a 5 ingredientes atomicos:
-      - si C ⊑ D, ningun plato de C puede quedar fuera de D;
-      - si C no ⊑ D, deberia aparecer algun plato de C fuera de D.
-    Devuelve una fila por pareja (C, D)."""
-    rng = random.Random(semilla)
-    ingredientes = sorted(razonador.hojas(ONTOLOGIA))
-    carta = {"compuestos": {}, "platos": {}}
-
-    # Categorias de cada plato aleatorio
-    clasificados = []
-    for _ in range(n_platos):
-        componentes = rng.sample(ingredientes, rng.randint(1, 5))
-        carta["platos"]["Aleatorio"] = {"tipo": "Principal", "componentes": componentes,
-                                        "etiquetas_carta": []}
-        cumple, _ = razonador.clasificar("Aleatorio", ONTOLOGIA, carta)
-        clasificados.append(set(cumple))
-
-    filas = []
-    for r in razonador.jerarquia_categorias(ONTOLOGIA):
-        en_c = [cats for cats in clasificados if r["c"] in cats]
-        fuera_de_d = sum(1 for cats in en_c if r["d"] not in cats)
-        filas.append({"c": r["c"], "d": r["d"], "subsume": r["subsume"],
-                      "platos_en_c": len(en_c), "fuera_de_d": fuera_de_d,
-                      "coincide": r["subsume"] == (fuera_de_d == 0)})
-    return filas
+# cliente -> categorias que debe cumplir todo lo que pida
+CLIENTES = {
+    "Celiaco": ["SinGluten"],
+    "Vegetariano": ["Vegetariano"],
+    "Intolerante a la lactosa": ["SinLactosa"],
+    "Vegano": ["Vegano"],
+    "Celiaco y vegetariano": ["SinGluten", "Vegetariano"],
+    "Celiaco e intolerante a la lactosa": ["SinGluten", "SinLactosa"],
+}
 
 
-def e6_comprobacion(n_platos=10000):
-    lineas = ["# E6. Comprobacion de la subsuncion con platos aleatorios", ""]
-    lineas.append(f"{n_platos} platos aleatorios (1-5 ingredientes atomicos, semilla 0), "
-                  "clasificados uno a uno con clasificar().")
+def platos_aptos(categorias, tipo, segun_la_carta=False):
+    """Platos de un tipo (Entrante, Principal o Postre) que cumplen todas
+    las categorias. Con segun_la_carta=True se miran las etiquetas
+    impresas en la carta en vez de lo que infiere el razonador."""
+    aptos = []
+    for plato, datos in CARTA["platos"].items():
+        if datos["tipo"] != tipo:
+            continue
+        if segun_la_carta:
+            cumple = datos["etiquetas_carta"]
+        else:
+            cumple, _ = razonador.clasificar(plato, ONTOLOGIA, CARTA)
+        if all(categoria in cumple for categoria in categorias):
+            aptos.append(plato)
+    return aptos
+
+
+def menus_para_clientes():
+    """Para cada cliente, que puede pedir de entrante, principal y postre,
+    y si le sale un menu completo. Ademas se avisa de los platos que la
+    carta impresa le ofreceria y que en realidad no puede comer."""
+    tipos = ONTOLOGIA["tipos_plato"]
+    lineas = ["# Menus para clientes con restricciones", ""]
+    lineas.append("| Cliente | " + " | ".join(tipos) + " | ¿Menu completo? |")
+    lineas.append("|---|" + "---|" * (len(tipos) + 1))
+
+    avisos = []
+    for cliente, categorias in CLIENTES.items():
+        celdas = []
+        completo = True
+        for tipo in tipos:
+            aptos = platos_aptos(categorias, tipo)
+            if len(aptos) == 0:
+                completo = False
+                celdas.append("ninguno")
+            else:
+                celdas.append(", ".join(aptos))
+
+            # platos que la carta impresa anuncia como aptos y no lo son
+            for plato in platos_aptos(categorias, tipo, segun_la_carta=True):
+                if plato not in aptos:
+                    avisos.append(f"- {cliente}: la carta le ofrece {plato}, pero no es apto")
+
+        lineas.append(f"| {cliente} | " + " | ".join(celdas)
+                      + f" | {'Si' if completo else 'No'} |")
+
     lineas.append("")
-    lineas.append("| C | D | Razonador: ¿C ⊑ D? | Platos en C | De ellos, fuera de D | ¿Coincide? |")
-    lineas.append("|---|---|---|---|---|---|")
-    filas = comprobar_subsunciones(n_platos)
-    for f in filas:
-        lineas.append(f"| {f['c']} | {f['d']} | {'Si' if f['subsume'] else 'No'} | "
-                      f"{f['platos_en_c']} | {f['fuera_de_d']} | {'Si' if f['coincide'] else 'NO'} |")
+    lineas.append("## Platos que la carta ofrece por error")
     lineas.append("")
-    lineas.append(f"Coinciden {sum(f['coincide'] for f in filas)} de {len(filas)} parejas.")
-    guardar("E6_comprobacion", lineas)
+    if len(avisos) == 0:
+        lineas.append("Ninguno.")
+    lineas = lineas + avisos
+    guardar("menus_para_clientes", lineas)
 
 
 EXPERIMENTOS = {
-    "E1": e1_clasificacion,
-    "E2": e2_subsuncion,
-    "E3": e3_ablacion,
-    "E4": e4_consistencia,
-    "E5": e5_auditoria,
-    "E6": e6_comprobacion,
+    "clasificacion": clasificacion,
+    "subsuncion": subsuncion,
+    "cambio_del_pecorino": cambio_del_pecorino,
+    "consistencia": consistencia,
+    "auditoria": auditoria,
+    "menus_para_clientes": menus_para_clientes,
 }
 
 
 if __name__ == "__main__":
     # Si la ontologia no es valida, no tiene sentido razonar sobre ella
-    if not e0_validacion():
+    if not validacion():
         sys.exit(1)
 
     if len(sys.argv) > 1:

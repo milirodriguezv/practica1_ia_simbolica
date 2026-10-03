@@ -22,14 +22,14 @@ Tareas de lógica descriptiva implementadas:
 - `ontologia.py` — TBox: taxonomía de ingredientes y definición de las categorías.
 - `carta.py` — ABox: ingredientes elaborados y los 9 platos de la carta.
 - `razonador.py` — algoritmos (no contiene ningún plato ni ingrediente concreto).
-- `main.py` — experimentos E0–E6 (E6: comprobación de la subsunción con 10 000 platos aleatorios); guarda los resultados en `resultados/`.
+- `main.py` — experimentos (validación, clasificación, subsunción, cambio del Pecorino, consistencia, auditoría y menús para clientes); guarda los resultados en `resultados/`.
 - `test_razonador.py` — tests.
 
 ## Cómo ejecutar
 
 ```
 python main.py            # todos los experimentos
-python main.py E2         # un experimento concreto
+python main.py auditoria  # un experimento concreto
 python -m unittest test_razonador.py -v
 ```
 
@@ -44,6 +44,6 @@ python -m unittest test_razonador.py -v
   cuajo animal de algunos quesos (p. ej. el Parmigiano Reggiano), que
   algunos vegetarianos estrictos no aceptan.
 - Criterio de precaución con la lactosa: solo el Parmesano se considera
-  sin lactosa (ver experimento E3).
+  sin lactosa (ver el experimento del cambio del Pecorino).
 - La etiqueta "SinLactosa" del helado en `carta.py` es un error introducido
-  a propósito para comprobar que la auditoría (E5) lo detecta.
+  a propósito para comprobar que la auditoría lo detecta.

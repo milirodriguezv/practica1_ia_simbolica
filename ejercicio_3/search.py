@@ -2,7 +2,8 @@
 search.py
 ---------
 Busqueda primero-el-mejor generica en GRAFO (libro 4a ed. seccion 3.3.2,
-figura 3.7; basada en best_first_search de aima-python -> citar). Todos
+figura 3.7; basada en best_first_search de aima-python,
+https://github.com/aimacode/aima-python). Todos
 los algoritmos salen del mismo codigo cambiando la funcion de evaluacion,
 que aqui se escribe como f(n) = peso_g * g(n) + peso_h * h(n):
 
@@ -11,7 +12,7 @@ que aqui se escribe como f(n) = peso_g * g(n) + peso_h * h(n):
     Voraz  ->       0       1      f(n) = h(n)
     A*     ->       1       1      f(n) = g(n) + h(n)
 
-Detalles que hay que respetar (guia, 6.2):
+Detalles de la implementacion:
     - cola de prioridad con heapq, desempate por h menor
     - guardar el mejor g por nodo y descartar entradas obsoletas al sacarlas
     - test objetivo AL EXPANDIR, no al generar

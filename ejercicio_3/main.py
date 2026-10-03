@@ -10,10 +10,10 @@ Marte, resuelto con A* (busqueda informada).
     metrics.py             -> factor de ramificacion efectivo b*
     rover_agent.py         -> el ciclo formular -> buscar -> ejecutar (RoverAgent)
     visualizar_terreno.py  -> dibuja mapas y rutas (nada de busqueda aqui)
-    run_experiments.py     -> experimentos E1-E5 -> results/*.csv
+    run_experiments.py     -> experimentos -> results/*.csv
     make_figures.py        -> figuras de la memoria -> figures/*.pdf
 
-Estado actual: paso 4. Genera un mapa, lo guarda, deja que el agente
+Este archivo genera un mapa, lo guarda, deja que el agente
 lo recorra con UCS, voraz, A*(h1) y A*(h2), y dibuja las cuatro rutas.
 """
 
@@ -60,7 +60,7 @@ def generar_y_dibujar(N, semilla):
     guardar_terreno(terreno, CARPETA_MAPAS / f"terreno_N{N}_s{semilla}.npz", params)
 
     dibujar_terreno(terreno, f"Terreno sintético {N}x{N} (semilla {semilla})",
-                    f"terreno_N{N}_s{semilla}.png")
+                    f"terreno_N{N}_s{semilla}.pdf")
 
     rutas, expandidos, subtitulos = {}, {}, {}
     print(f"{'algoritmo':<11} {'coste (s)':>10} {'pasos':>6} {'generados':>10} "
@@ -79,9 +79,9 @@ def generar_y_dibujar(N, semilla):
               f"{r.expandidos:>11} {r.tiempo:>11.3f}")
 
     dibujar_terreno(terreno, f"Rutas en el terreno {N}x{N} (semilla {semilla})",
-                    f"rutas_N{N}_s{semilla}.png", rutas=rutas)
+                    f"rutas_N{N}_s{semilla}.pdf", rutas=rutas)
     dibujar_rutas_por_separado(terreno, f"Terreno {N}x{N} (semilla {semilla})",
-                               f"rutas_paneles_N{N}_s{semilla}.png", rutas,
+                               f"rutas_paneles_N{N}_s{semilla}.pdf", rutas,
                                expandidos=expandidos, subtitulos=subtitulos)
     print()
     return terreno

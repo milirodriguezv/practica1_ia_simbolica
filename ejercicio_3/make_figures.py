@@ -1,23 +1,19 @@
 """
 make_figures.py
 ---------------
-Lee results/*.csv (de run_experiments.py) y genera las figuras y tablas
-de la memoria:
+Lee results/*.csv (de run_experiments.py) y genera las figuras y tablas:
 
-    figures/velocidad_pendiente.pdf  v(theta), figura de la metodologia
-    figures/e2_nodos_vs_d.pdf        nodos expandidos frente a d (UCS, A* h1, A* h2)
-    figures/e3_voraz.pdf             sobrecoste y nodos expandidos de la voraz frente a A*
-    figures/e4_asimetria.pdf         diferencia ida/vuelta frente al desnivel S -> G
-    figures/e5_escalabilidad.pdf     tiempo, nodos y frontera maxima frente a N
-    results/tabla_b_estrella_*.tex   tabla estilo figura 3.26 (generados y b* frente a d)
-    results/tabla_e1.tex             E1: error frente a networkx
+    figures/velocidad_pendiente.pdf    v(theta), para explicar el modelo de coste
+    figures/nodos_por_profundidad.pdf  nodos expandidos frente a d (UCS, A* h1, A* h2)
+    figures/voraz.pdf                  tiempo de viaje extra y nodos de la voraz frente a A*
+    figures/ida_y_vuelta.pdf           diferencia ida/vuelta frente al desnivel S -> G
+    figures/pendiente_maxima.pdf       rutas posibles y tiempo extra segun la pendiente maxima
+    results/tabla_b_estrella_*.tex     nodos generados y b* frente a d
 
-Cada figura se guarda en .pdf (para LaTeX) y en .png (para verla rapido).
+Las figuras se guardan en .pdf, para incluirlas en LaTeX.
 Las rutas sobre el mapa las dibuja main.py.
 
-Colores: un color fijo por algoritmo en todas las figuras (paleta de
-referencia validada para daltonismo); el tipo de terreno va en paneles
-separados, no en color.
+Cada algoritmo tiene siempre el mismo color (el de visualizar_terreno.py).
 """
 
 import math
@@ -32,31 +28,28 @@ import matplotlib.pyplot as plt
 
 from parametros import K_BAJ, K_SUB, THETA_MAX, V_MAX
 from problem import velocidad
+from visualizar_terreno import COLOR_ALGORITMO
 
 CARPETA = Path(__file__).parent
 RESULTADOS = CARPETA / "results"
 FIGURAS = CARPETA / "figures"
 
-COLOR = {  # el color sigue al algoritmo, en todas las figuras
-    "UCS": "#2a78d6",
-    "A* (h1)": "#eb6834",
-    "A* (h2)": "#1baf7a",
-    "Voraz (h2)": "#eda100",
-}
-NEUTRO = "#52514e"
-TINTA = "#0b0b0b"
+COLOR = COLOR_ALGORITMO
+COLOR_TERRENO = {"base": "#c1440e", "abrupto": "#6a4c93"}
+NEUTRO = "#7a6f66"
+TINTA = "black"
 TERRENOS = {"base": "Terreno base", "abrupto": "Terreno abrupto"}
 
 plt.rcParams.update({
     "font.size": 10,
     "axes.spines.top": False,
     "axes.spines.right": False,
-    "axes.edgecolor": "#8a8984",
+    "axes.edgecolor": "gray",
     "axes.labelcolor": TINTA,
     "xtick.color": NEUTRO,
     "ytick.color": NEUTRO,
     "axes.grid": True,
-    "grid.color": "#e4e3df",
+    "grid.color": "#e8e2da",
     "grid.linewidth": 0.8,
     "axes.axisbelow": True,
     "lines.linewidth": 2,
@@ -66,8 +59,7 @@ plt.rcParams.update({
 
 def guardar(figura, nombre):
     FIGURAS.mkdir(exist_ok=True)
-    for extension in ("pdf", "png"):
-        figura.savefig(FIGURAS / f"{nombre}.{extension}", dpi=150, bbox_inches="tight")
+    figura.savefig(FIGURAS / f"{nombre}.pdf", bbox_inches="tight")
     plt.close(figura)
     print(f"  figures/{nombre}.pdf")
 
@@ -92,12 +84,12 @@ def fig_velocidad():
     v = [velocidad(math.radians(g)) / V_MAX for g in grados]
 
     figura, ejes = plt.subplots(figsize=(5.5, 3.2))
-    ejes.plot(grados, v, color=COLOR["UCS"])
-    ejes.axvline(0, color="#8a8984", linewidth=0.8)
+    ejes.plot(grados, v, color=COLOR["A* (h2)"])
+    ejes.axvline(0, color="gray", linewidth=0.8)
     limite = math.degrees(THETA_MAX)
     for g, texto in [(-limite, f"bajada: {1 - K_BAJ:.1f}·v_max"), (limite, f"subida: {1 - K_SUB:.1f}·v_max")]:
         valor = velocidad(math.radians(g)) / V_MAX
-        ejes.plot(g, valor, "o", color=COLOR["UCS"], markersize=6)
+        ejes.plot(g, valor, "o", color=COLOR["A* (h2)"], markersize=6)
         ejes.annotate(texto, (g, valor), xytext=(0, -14), textcoords="offset points",
                       ha="left" if g < 0 else "right", fontsize=9)
     ejes.set_xlabel("pendiente θ (grados; > 0 sube)")
@@ -117,15 +109,15 @@ def agrupar_por_d(df, ancho=20):
     return df
 
 
-def fig_e2(e2):
+def fig_nodos_por_profundidad(heuristicas):
     """Nodos expandidos frente a d: mediana y rango intercuartilico."""
-    e2 = agrupar_por_d(e2)
-    casos = e2[e2.algoritmo == "UCS"].groupby(["terreno", "d_grupo"]).size()
+    heuristicas = agrupar_por_d(heuristicas)
+    casos = heuristicas[heuristicas.algoritmo == "UCS"].groupby(["terreno", "d_grupo"]).size()
     validos = casos[casos >= MIN_CASOS].index
-    e2 = e2[e2.set_index(["terreno", "d_grupo"]).index.isin(validos)]
+    heuristicas = heuristicas[heuristicas.set_index(["terreno", "d_grupo"]).index.isin(validos)]
     figura, ejes_todos = plt.subplots(1, 2, figsize=(10, 3.8), sharey=True)
     for ejes, (tipo, titulo) in zip(ejes_todos, TERRENOS.items()):
-        datos = e2[e2.terreno == tipo]
+        datos = heuristicas[heuristicas.terreno == tipo]
         for algoritmo in ["UCS", "A* (h1)", "A* (h2)"]:
             g = datos[datos.algoritmo == algoritmo].groupby("d_grupo")["expandidos"]
             mediana, q1, q3 = g.median(), g.quantile(0.25), g.quantile(0.75)
@@ -138,15 +130,15 @@ def fig_e2(e2):
         ejes.set_xlim(right=ejes.get_xlim()[1] * 1.15)  # sitio para las etiquetas
     ejes_todos[0].set_ylabel("nodos expandidos (mediana, escala log)")
     ejes_todos[0].legend(loc="lower right", fontsize=9)
-    figura.suptitle("E2 · Nodos expandidos frente a la profundidad (banda: cuartiles 25–75 %)",
+    figura.suptitle("Nodos expandidos frente a la profundidad de la solución (banda: cuartiles 25–75 %)",
                     fontsize=11, x=0.01, ha="left")
     figura.tight_layout()
-    guardar(figura, "e2_nodos_vs_d")
+    guardar(figura, "nodos_por_profundidad")
 
 
-def tabla_b_estrella(e2, tipo):
+def tabla_b_estrella(heuristicas, tipo):
     """Tabla estilo figura 3.26: generados medios y b* medio por intervalo de d."""
-    datos = agrupar_por_d(e2[e2.terreno == tipo])
+    datos = agrupar_por_d(heuristicas[heuristicas.terreno == tipo])
     algoritmos = ["UCS", "A* (h1)", "A* (h2)"]
     media = datos.groupby(["d_grupo", "algoritmo"])[["generados", "b_estrella"]].mean().unstack()
     casos = datos[datos.algoritmo == "UCS"].groupby("d_grupo").size()
@@ -176,17 +168,17 @@ def tabla_b_estrella(e2, tipo):
     print(f"  results/{ruta.name}")
 
 
-def fig_e3(e3):
-    """Dos graficas (no doble eje): sobrecoste medio y nodos expandidos medios."""
+def fig_voraz(voraz):
+    """Dos graficas por terreno: tiempo de viaje extra medio y nodos expandidos medios."""
     orden = ["A* (h2)", "Voraz (h2)", "Voraz (h1)"]
     figura, ejes_todos = plt.subplots(2, 2, figsize=(10, 4.2))
     for columna, (tipo, titulo) in enumerate(TERRENOS.items()):
-        media = e3[e3.terreno == tipo].groupby("algoritmo")[["sobrecoste_pct", "expandidos"]].mean().loc[orden]
+        media = voraz[voraz.terreno == tipo].groupby("algoritmo")[["sobrecoste_pct", "expandidos"]].mean().loc[orden]
         y = np.arange(len(orden))
         colores = [COLOR["A* (h2)"] if a == "A* (h2)" else NEUTRO for a in orden]
 
         for fila, (columna_datos, etiqueta, formato) in enumerate([
-                ("sobrecoste_pct", "sobrecoste medio (%)", "{:.1f} %"),
+                ("sobrecoste_pct", "tiempo de viaje extra (%)", "{:.1f} %"),
                 ("expandidos", "nodos expandidos (media)", "{:,.0f}")]):
             ejes = ejes_todos[fila, columna]
             valores = media[columna_datos]
@@ -199,105 +191,113 @@ def fig_e3(e3):
             ejes.grid(axis="y", visible=False)
             ejes.set_title(f"{titulo} · {etiqueta}", fontsize=10, loc="left")
             ejes.set_xlim(right=valores.max() * 1.25)
-    figura.suptitle("E3 · Búsqueda voraz frente al óptimo A*(h2) (30 mapas por terreno)",
+    figura.suptitle("Búsqueda voraz frente a la ruta óptima de A*(h2) (30 mapas por terreno)",
                     fontsize=11, x=0.01, ha="left")
     figura.tight_layout()
-    guardar(figura, "e3_voraz")
+    guardar(figura, "voraz")
 
 
-def fig_e4(e4):
+def fig_ida_y_vuelta(ida_y_vuelta):
     """Diferencia ida/vuelta (%) frente al desnivel S -> G."""
     figura, ejes_todos = plt.subplots(1, 2, figsize=(10, 3.8), sharey=True)
     for ejes, (tipo, titulo) in zip(ejes_todos, TERRENOS.items()):
-        datos = e4[e4.terreno == tipo]
+        datos = ida_y_vuelta[ida_y_vuelta.terreno == tipo]
         r = datos[["desnivel_SG", "diferencia_pct"]].corr().iloc[0, 1]
-        ejes.axhline(0, color="#8a8984", linewidth=0.8)
-        ejes.axvline(0, color="#8a8984", linewidth=0.8)
+        ejes.axhline(0, color="gray", linewidth=0.8)
+        ejes.axvline(0, color="gray", linewidth=0.8)
         misma = datos.misma_ruta
         ejes.scatter(datos.desnivel_SG[misma], datos.diferencia_pct[misma], s=36,
-                     color=COLOR["UCS"], edgecolor="white", linewidth=1, label="misma ruta a la vuelta")
+                     color=COLOR_TERRENO[tipo], edgecolor="white", linewidth=1, label="misma ruta a la vuelta")
         ejes.scatter(datos.desnivel_SG[~misma], datos.diferencia_pct[~misma], s=40, marker="^",
-                     facecolor="white", edgecolor=COLOR["UCS"], linewidth=1.5, label="ruta distinta")
+                     facecolor="white", edgecolor=COLOR_TERRENO[tipo], linewidth=1.5, label="ruta distinta")
         ejes.set_title(f"{titulo}  (r = {r:.2f})", fontsize=11, loc="left")
         ejes.set_xlabel("desnivel h(G) − h(S)  [m]")
     ejes_todos[0].set_ylabel("coste ida / coste vuelta − 1  (%)")
     ejes_todos[0].legend(loc="upper left", fontsize=9)
-    figura.suptitle("E4 · Asimetría: ir a un punto más alto cuesta más que volver",
+    figura.suptitle("Ida y vuelta: ir a un punto más alto cuesta más que volver",
                     fontsize=11, x=0.01, ha="left")
     figura.tight_layout()
-    guardar(figura, "e4_asimetria")
+    guardar(figura, "ida_y_vuelta")
 
 
-def fig_e5(e5):
-    """Tiempo, nodos expandidos y frontera maxima frente a N (log-log)."""
-    metricas = [("tiempo", "tiempo de búsqueda (s)"), ("expandidos", "nodos expandidos"),
-                ("frontera_max", "frontera máxima (memoria)")]
-    figura, ejes_todos = plt.subplots(1, 3, figsize=(12, 3.8))
-    media = e5.groupby(["algoritmo", "N"])[[m for m, _ in metricas]].mean()
-    for ejes, (metrica, titulo) in zip(ejes_todos, metricas):
-        for algoritmo, color in COLOR.items():
-            serie = media.loc[algoritmo, metrica]
-            ejes.plot(serie.index, serie.values, color=color, marker="o", markersize=5, label=algoritmo)
-            etiqueta_final(ejes, serie.index[-1], serie.values[-1], algoritmo, color)
-        ejes.set_xscale("log", base=2)
-        ejes.set_yscale("log")
-        ejes.set_xticks(sorted(e5.N.unique()), [str(n) for n in sorted(e5.N.unique())])
-        ejes.minorticks_off()
-        ejes.set_xlim(right=ejes.get_xlim()[1] * 2.2)
-        ejes.set_xlabel("N (mapa N × N)")
-        ejes.set_title(titulo, fontsize=11, loc="left")
-    ejes_todos[0].legend(loc="upper left", fontsize=9)
-    figura.suptitle("E5 · Escalabilidad (media de 20 mapas por tamaño, escalas log)",
+def mapas_con_ruta_siempre(datos):
+    """Filas de los mapas en los que hay ruta con todas las pendientes
+    maximas. Para comparar tiempos hay que usar siempre los mismos mapas;
+    si no, cada media saldria de un conjunto de mapas distinto."""
+    siempre = datos.groupby(["terreno", "semilla"]).hay_ruta.transform("all")
+    return datos[siempre]
+
+
+def fig_pendiente_maxima(datos):
+    """Izquierda: en cuantos mapas sigue habiendo ruta. Derecha: cuanto se
+    alarga el viaje respecto al rover que aguanta 25 grados, en los mapas
+    en los que todos los rovers llegan."""
+    comparables = mapas_con_ruta_siempre(datos)
+    figura, (izquierda, derecha) = plt.subplots(1, 2, figsize=(10, 3.6))
+    for tipo, titulo in TERRENOS.items():
+        del_tipo = datos[datos.terreno == tipo]
+        por_pendiente = del_tipo.groupby("theta_max_grados")
+        con_ruta = 100 * por_pendiente.hay_ruta.mean()
+        tiempo_extra = comparables[comparables.terreno == tipo].groupby(
+            "theta_max_grados").tiempo_extra_pct.mean()
+        izquierda.plot(con_ruta.index, con_ruta.values, marker="o", color=COLOR_TERRENO[tipo], label=titulo)
+        derecha.plot(tiempo_extra.index, tiempo_extra.values, marker="o", color=COLOR_TERRENO[tipo], label=titulo)
+
+    pendientes = sorted(datos.theta_max_grados.unique())
+    for ejes in (izquierda, derecha):
+        ejes.set_xticks(pendientes, [f"{g}°" for g in pendientes])
+        ejes.set_xlabel("pendiente máxima que aguanta el rover")
+    izquierda.set_ylabel("mapas en los que hay ruta (%)")
+    izquierda.set_ylim(0, 105)
+    izquierda.set_title("¿Se puede llegar a G?", fontsize=11, loc="left")
+    derecha.set_ylabel("tiempo de viaje extra (%)")
+    derecha.set_title("Cuánto se alarga el viaje (mapas donde todos llegan)", fontsize=11, loc="left")
+    izquierda.legend(loc="lower right", fontsize=9)
+    figura.suptitle("Rovers que aguantan menos pendiente (mismos mapas, mismo S y G)",
                     fontsize=11, x=0.01, ha="left")
     figura.tight_layout()
-    guardar(figura, "e5_escalabilidad")
+    guardar(figura, "pendiente_maxima")
 
 
-def tabla_e1(e1):
-    resumen = e1.groupby(["terreno", "algoritmo"]).agg(
-        mapas=("semilla", "nunique"), error_max=("error_relativo", "max"))
-    lineas = [r"\begin{tabular}{llrr}", r"\hline",
-              r"Terreno & Algoritmo & Mapas & Error relativo máx. \\", r"\hline"]
-    for (tipo, algoritmo), fila in resumen.iterrows():
-        lineas.append(f"{tipo} & {algoritmo} & {fila.mapas} & {fila.error_max:.1e}" + r" \\")
-    lineas += [r"\hline", r"\end{tabular}"]
-    (RESULTADOS / "tabla_e1.tex").write_text("\n".join(lineas) + "\n", encoding="utf-8")
-    print("  results/tabla_e1.tex")
-
-
-def resumen(e1, e2, e3, e4, e5):
+def resumen(heuristicas, voraz, ida_y_vuelta, pendiente):
     """Numeros clave para el texto de la memoria."""
     print("\nResumen:")
-    print(f"  E1: error relativo maximo frente a networkx = {e1.error_relativo.max():.1e}")
-    exp = e2.groupby(["terreno", "algoritmo"]).expandidos.mean().unstack()
+    exp = heuristicas.groupby(["terreno", "algoritmo"]).expandidos.mean().unstack()
     for tipo in TERRENOS:
-        print(f"  E2 {tipo}: expandidos medios UCS {exp.loc[tipo, 'UCS']:.0f}, "
+        print(f"  heuristicas, {tipo}: expandidos medios UCS {exp.loc[tipo, 'UCS']:.0f}, "
               f"A*(h1) {exp.loc[tipo, 'A* (h1)']:.0f}, A*(h2) {exp.loc[tipo, 'A* (h2)']:.0f}")
-    sc = e3.groupby(["terreno", "algoritmo"]).sobrecoste_pct.agg(["mean", "max"])
+    sc = voraz.groupby(["terreno", "algoritmo"]).sobrecoste_pct.agg(["mean", "max"])
     for tipo in TERRENOS:
-        print(f"  E3 {tipo}: voraz(h2) +{sc.loc[(tipo, 'Voraz (h2)'), 'mean']:.1f}% de media "
+        print(f"  voraz, {tipo}: voraz(h2) +{sc.loc[(tipo, 'Voraz (h2)'), 'mean']:.1f}% de media "
               f"(max +{sc.loc[(tipo, 'Voraz (h2)'), 'max']:.1f}%)")
     for tipo in TERRENOS:
-        d = e4[e4.terreno == tipo]
-        print(f"  E4 {tipo}: |ida/vuelta - 1| medio {d.diferencia_pct.abs().mean():.1f}%, "
+        d = ida_y_vuelta[ida_y_vuelta.terreno == tipo]
+        print(f"  ida y vuelta, {tipo}: |ida/vuelta - 1| medio {d.diferencia_pct.abs().mean():.1f}%, "
               f"max {d.diferencia_pct.abs().max():.1f}%, misma ruta en {100 * d.misma_ruta.mean():.0f}%, "
               f"r(desnivel, diferencia) = {d[['desnivel_SG', 'diferencia_pct']].corr().iloc[0, 1]:.2f}")
-    t = e5.groupby(["N", "algoritmo"]).tiempo.mean().unstack()
-    print(f"  E5 N=400: UCS {t.loc[400, 'UCS']:.2f} s, A*(h2) {t.loc[400, 'A* (h2)']:.2f} s "
-          f"({t.loc[400, 'UCS'] / t.loc[400, 'A* (h2)']:.1f}x mas rapido)")
+    comparables = mapas_con_ruta_siempre(pendiente)
+    for tipo in TERRENOS:
+        del_tipo = pendiente[pendiente.terreno == tipo]
+        comparables_tipo = comparables[comparables.terreno == tipo]
+        for grados in sorted(pendiente.theta_max_grados.unique()):
+            hay_ruta = del_tipo[del_tipo.theta_max_grados == grados].hay_ruta
+            extra = comparables_tipo[comparables_tipo.theta_max_grados == grados].tiempo_extra_pct
+            print(f"  pendiente maxima {grados} grados, {tipo}: hay ruta en {100 * hay_ruta.mean():.0f}% "
+                  f"de los mapas, tiempo extra medio {extra.mean():.1f}% (max {extra.max():.1f}%)")
 
 
 if __name__ == "__main__":
-    e1, e2, e3, e4, e5 = (pd.read_csv(RESULTADOS / f) for f in [
-        "e1_correccion.csv", "e2_heuristicas.csv", "e3_voraz.csv",
-        "e4_asimetria.csv", "e5_escalabilidad.csv"])
+    heuristicas = pd.read_csv(RESULTADOS / "heuristicas.csv")
+    voraz = pd.read_csv(RESULTADOS / "voraz.csv")
+    ida_y_vuelta = pd.read_csv(RESULTADOS / "ida_y_vuelta.csv")
+    pendiente = pd.read_csv(RESULTADOS / "pendiente_maxima.csv")
+
     print("Figuras y tablas:")
     fig_velocidad()
-    fig_e2(e2)
-    tabla_b_estrella(e2, "base")
-    tabla_b_estrella(e2, "abrupto")
-    fig_e3(e3)
-    fig_e4(e4)
-    fig_e5(e5)
-    tabla_e1(e1)
-    resumen(e1, e2, e3, e4, e5)
+    fig_nodos_por_profundidad(heuristicas)
+    tabla_b_estrella(heuristicas, "base")
+    tabla_b_estrella(heuristicas, "abrupto")
+    fig_voraz(voraz)
+    fig_ida_y_vuelta(ida_y_vuelta)
+    fig_pendiente_maxima(pendiente)
+    resumen(heuristicas, voraz, ida_y_vuelta, pendiente)

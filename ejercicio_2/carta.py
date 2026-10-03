@@ -6,7 +6,7 @@ que lleva cada plato. Las categorias dieteticas de cada plato no se
 escriben aqui: las calcula el razonador.
 
 "etiquetas_carta" es lo que el restaurante afirma en su carta impresa.
-Solo se usa para auditar la carta (experimento E5), nunca para clasificar.
+Solo se usa para auditar la carta (experimento de auditoria), nunca para clasificar.
 
 Supuesto de mundo cerrado: la lista de componentes de cada plato es
 completa (si no aparece, el plato no lo lleva).
@@ -49,7 +49,7 @@ PLATOS = {
     "EspaguetisAlPomodoro": {
         "tipo": "Principal",
         "componentes": ["Espaguetis", "SalsaTomate", "Albahaca"],
-        # La carta solo dice "Vegetariano": la auditoria (E5) debe avisar
+        # La carta solo dice "Vegetariano": la auditoria debe avisar
         # de que tambien es Vegano, pero no de SinCarne ni SinLactosa,
         # que ya van implicadas por Vegano.
         "etiquetas_carta": ["Vegetariano"],
@@ -79,7 +79,7 @@ PLATOS = {
     "HeladoDePistacho": {
         "tipo": "Postre",
         "componentes": ["BaseHelado", "Pistacho"],
-        # ERROR INTRODUCIDO A PROPOSITO para el experimento E5:
+        # ERROR INTRODUCIDO A PROPOSITO para el experimento de auditoria:
         # la carta afirma "SinLactosa", pero la lactosa esta escondida
         # dentro del elaborado BaseHelado (leche y nata).
         "etiquetas_carta": ["SinGluten", "Vegetariano", "SinLactosa"],

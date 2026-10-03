@@ -1,4 +1,4 @@
-# E2. Subsuncion entre categorias (comparando definiciones)
+# Subsuncion entre categorias (comparando definiciones)
 
 | C | D | ¿C ⊑ D? | Contraejemplo |
 |---|---|---|---|

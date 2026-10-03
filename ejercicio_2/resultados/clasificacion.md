@@ -1,4 +1,4 @@
-# E1. Clasificacion de la carta
+# Clasificacion de la carta
 
 | Plato | Tipo | SinGluten | Vegetariano | SinCarne | SinLactosa | Vegano |
 |---|---|---|---|---|---|---|

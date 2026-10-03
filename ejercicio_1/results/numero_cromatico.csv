@@ -1,0 +1,6 @@
+mapa,colores,variables,clausulas,resultado,llamadas,decisiones,propagaciones,retrocesos,tiempo_ms
+Australia,2,14,32,UNSAT,13,2,10,2,0.2
+Australia,3,21,55,SAT,22,3,18,0,0.19
+EE. UU.,2,96,306,UNSAT,17,2,14,2,0.88
+EE. UU.,3,144,507,UNSAT,1125,48,1076,48,55.74
+EE. UU.,4,192,756,SAT,208,25,182,2,12.4

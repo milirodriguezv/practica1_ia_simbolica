@@ -1,4 +1,4 @@
-# E4. Consistencia de conceptos
+# Consistencia de conceptos
 
 | Concepto | ¿Satisfacible? | Testigo / motivo |
 |---|---|---|

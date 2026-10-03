@@ -1,4 +1,4 @@
-# E3. Sensibilidad a la TBox
+# Cambio en la TBox: el Pecorino como queso sin lactosa
 
 Cambio: declarar el PecorinoRomano como queso curado sin lactosa (quitar PecorinoRomano ⊑ ConLactosa).
 

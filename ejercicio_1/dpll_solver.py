@@ -27,13 +27,19 @@ es la que mas simplifica la formula, sea cual sea el valor que tome.
 El solver no sabe nada del dominio del problema (grafos, mapas, etc):
 solo trabaja con numeros (variables) y conjuntos de numeros (clausulas).
 
-Para los experimentos, los pasos 2 y 3 se pueden desactivar (ablacion)
-y cada llamada a solve() deja sus contadores en self.estadisticas.
+Para los experimentos, los pasos 2 y 3 se pueden desactivar y cada
+llamada a solve() deja sus contadores en self.estadisticas. Tambien se
+puede poner un tope de llamadas (max_llamadas): sin la clausula unitaria
+algunos mapas tardarian horas.
 """
 
 import time
 from collections import Counter
 from dataclasses import dataclass
+
+
+class LimiteSuperado(Exception):
+    """El solver ha superado max_llamadas sin llegar a una respuesta."""
 
 
 @dataclass
@@ -61,16 +67,19 @@ def simplificar(clausulas, literal):
 
 class DPLLSolver:
 
-    def __init__(self, usar_unitaria=True, usar_puro=True):
+    def __init__(self, usar_unitaria=True, usar_puro=True, max_llamadas=None):
         """
         Args:
             usar_unitaria: Aplicar la regla de la clausula unitaria (paso 2).
             usar_puro: Aplicar la regla del simbolo puro (paso 3).
-        Con las dos a False queda el backtracking basico: sigue siendo
-        correcto (la ramificacion prueba todo), pero explora mas.
+            max_llamadas: Tope de llamadas recursivas. Si se supera se
+                lanza LimiteSuperado. None = sin tope.
+        Con las dos reglas a False queda el backtracking basico: sigue
+        siendo correcto (la ramificacion prueba todo), pero explora mas.
         """
         self.usar_unitaria = usar_unitaria
         self.usar_puro = usar_puro
+        self.max_llamadas = max_llamadas
         self.estadisticas = Estadisticas()
 
     def solve(self, clauses):
@@ -79,12 +88,17 @@ class DPLLSolver:
         variables que no hacen falta pueden quedar sin asignar."""
         self.estadisticas = Estadisticas()
         inicio = time.perf_counter()
-        resultado = self._dpll([frozenset(c) for c in clauses], {})
-        self.estadisticas.tiempo = time.perf_counter() - inicio
+        try:
+            resultado = self._dpll([frozenset(c) for c in clauses], {})
+        finally:
+            # el tiempo se guarda aunque se haya superado el tope
+            self.estadisticas.tiempo = time.perf_counter() - inicio
         return resultado
 
     def _dpll(self, clausulas, asignacion):
         self.estadisticas.llamadas += 1
+        if self.max_llamadas is not None and self.estadisticas.llamadas > self.max_llamadas:
+            raise LimiteSuperado()
 
         # paso 1: terminacion anticipada
         if not clausulas:

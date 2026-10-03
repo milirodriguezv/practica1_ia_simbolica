@@ -26,24 +26,34 @@ from matplotlib.patches import Patch
 
 CARPETA_FIGURAS = Path(__file__).parent / "figures"
 
-COLORES_RUTAS = ["#29b6f6", "#ab47bc", "#66bb6a", "#ffa726", "#ef5350"]
+# Un color por algoritmo, el mismo en los mapas y en las graficas de
+# make_figures.py.
+COLOR_ALGORITMO = {
+    "UCS": "#6a4c93",         # morado
+    "A* (h1)": "#f2a541",     # naranja arena
+    "A* (h2)": "#c1440e",     # rojo Marte
+    "Voraz (h1)": "#74b49b",  # verde claro
+    "Voraz (h2)": "#2a7f62",  # verde oscuro
+}
 # Trazo y grosor distintos por ruta: si dos rutas coinciden, la de abajo
 # (mas gruesa) sigue asomando por los huecos de la de arriba.
 ESTILOS_RUTAS = [("-", 5.0), ("-", 3.0), ("--", 2.5), (":", 2.5), ("-.", 2.0)]
-COLOR_EXPANDIDOS = "#1565c0"
+COLOR_EXPANDIDOS = "#8ecae6"
+COLOR_PARED = "#e9c46a"
 
 
 def _dibujar_fondo(ejes, terreno):
     """Alturas + paredes > THETA_MAX + rocas. Devuelve la imagen de alturas
     (para la barra de color) y las entradas de la leyenda."""
-    fondo = ejes.imshow(terreno.alturas, cmap="copper", origin="upper")
+    # alturas en gris, como los modelos de elevacion de HiRISE
+    fondo = ejes.imshow(terreno.alturas, cmap="gray", origin="upper")
 
     pared = np.ma.masked_where(~terreno.mascara_pendiente_excesiva(), np.ones_like(terreno.alturas))
-    ejes.imshow(pared, cmap=ListedColormap(["#e53935"]), alpha=0.45, origin="upper")
+    ejes.imshow(pared, cmap=ListedColormap([COLOR_PARED]), alpha=0.55, origin="upper")
     rocas = np.ma.masked_where(~terreno.rocas, np.ones_like(terreno.alturas))
     ejes.imshow(rocas, cmap=ListedColormap(["black"]), origin="upper")
 
-    leyenda = [Patch(color="#e53935", alpha=0.45, label="Pendiente > θ_max"),
+    leyenda = [Patch(color=COLOR_PARED, alpha=0.55, label="Pendiente > θ_max"),
                Patch(color="black", label="Roca")]
     return fondo, leyenda
 
@@ -84,7 +94,8 @@ def dibujar_terreno(terreno, titulo, nombre_archivo, rutas=None):
     fondo, leyenda = _dibujar_fondo(ejes, terreno)
     figura.colorbar(fondo, ax=ejes, fraction=0.046, pad=0.04, label="altura (m)")
 
-    for color, (estilo, grosor), (nombre, ruta) in zip(COLORES_RUTAS, ESTILOS_RUTAS, rutas.items()):
+    for (estilo, grosor), (nombre, ruta) in zip(ESTILOS_RUTAS, rutas.items()):
+        color = COLOR_ALGORITMO.get(nombre, "black")
         filas, columnas = zip(*ruta)
         ejes.plot(columnas, filas, color=color, linestyle=estilo, linewidth=grosor)
         leyenda.append(Line2D([], [], color=color, linestyle=estilo, linewidth=grosor, label=nombre))
@@ -112,7 +123,8 @@ def dibujar_rutas_por_separado(terreno, titulo, nombre_archivo, rutas, expandido
     figura, ejes_todos = plt.subplots(filas_rejilla, 2, figsize=(11, 5.5 * filas_rejilla),
                                       squeeze=False, constrained_layout=True)
 
-    for ejes, color, (nombre, ruta) in zip(ejes_todos.flat, COLORES_RUTAS, rutas.items()):
+    for ejes, (nombre, ruta) in zip(ejes_todos.flat, rutas.items()):
+        color = COLOR_ALGORITMO.get(nombre, "black")
         fondo, leyenda = _dibujar_fondo(ejes, terreno)
 
         if nombre in expandidos:
@@ -120,8 +132,8 @@ def dibujar_rutas_por_separado(terreno, titulo, nombre_archivo, rutas, expandido
             for celda in expandidos[nombre]:
                 mascara[celda] = True
             capa = np.ma.masked_where(~mascara, np.ones_like(terreno.alturas))
-            ejes.imshow(capa, cmap=ListedColormap([COLOR_EXPANDIDOS]), alpha=0.4, origin="upper")
-            leyenda.append(Patch(color=COLOR_EXPANDIDOS, alpha=0.4, label="Nodos expandidos"))
+            ejes.imshow(capa, cmap=ListedColormap([COLOR_EXPANDIDOS]), alpha=0.5, origin="upper")
+            leyenda.append(Patch(color=COLOR_EXPANDIDOS, alpha=0.5, label="Nodos expandidos"))
 
         filas, columnas = zip(*ruta)
         ejes.plot(columnas, filas, color=color, linewidth=2.5)

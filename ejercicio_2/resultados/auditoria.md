@@ -1,4 +1,4 @@
-# E5. Auditoria de las etiquetas de la carta
+# Auditoria de las etiquetas de la carta
 
 - [OMISION] VitelTone es SinLactosa y la carta no lo indica
 - [OMISION] EspaguetisAlPomodoro es Vegano y la carta no lo indica

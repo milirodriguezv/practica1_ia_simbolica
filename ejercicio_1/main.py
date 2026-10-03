@@ -9,7 +9,10 @@ coloreado de grafos (mapas de Australia y de EE. UU.).
     logical_agent.py       -> el ciclo TELL/ASK (LogicalAgent)
     graph_coloring.py      -> funciones puras: grafo -> clausulas FNC
     visualizar_mapa.py     -> dibuja el resultado (nada de logica aqui)
+    experimentos.py        -> experimentos sobre los dos mapas
 """
+
+from pathlib import Path
 
 from environment import Environment
 from logical_agent import LogicalAgent
@@ -50,7 +53,11 @@ def resolver_y_dibujar(nombre, mapa, n_colores, nombre_archivo_imagen, **dibujo)
 
 
 if __name__ == "__main__":
-    resolver_y_dibujar("Australia", AUSTRALIA, 3, "mapa_3_colores.png")
-    resolver_y_dibujar("Australia", AUSTRALIA, 2, "mapa_2_colores.png")
-    resolver_y_dibujar("EE. UU.", EEUU, 3, "eeuu_3_colores.png", tamano=250, margen=2)
-    resolver_y_dibujar("EE. UU.", EEUU, 4, "eeuu_4_colores.png", tamano=250, margen=2)
+    # las imagenes se guardan en figures/, junto a las de los experimentos
+    figuras = Path(__file__).parent / "figures"
+    figuras.mkdir(exist_ok=True)
+
+    resolver_y_dibujar("Australia", AUSTRALIA, 3, figuras / "mapa_3_colores.pdf")
+    resolver_y_dibujar("Australia", AUSTRALIA, 2, figuras / "mapa_2_colores.pdf")
+    resolver_y_dibujar("EE. UU.", EEUU, 3, figuras / "eeuu_3_colores.pdf", tamano=250, margen=2)
+    resolver_y_dibujar("EE. UU.", EEUU, 4, figuras / "eeuu_4_colores.pdf", tamano=250, margen=2)

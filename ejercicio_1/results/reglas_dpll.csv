@@ -1,0 +1,21 @@
+mapa,colores,variante,resultado,llamadas,decisiones,propagaciones,simbolos_puros,tiempo_s
+Australia,2,DPLL completo,UNSAT,13,2,10,0,0.0
+Australia,2,sin símbolo puro,UNSAT,13,2,10,0,0.0
+Australia,2,sin cláusula unitaria,UNSAT,59,48,0,10,0.0
+Australia,2,solo backtracking,UNSAT,51,50,0,0,0.0
+Australia,3,DPLL completo,SAT,22,3,18,0,0.0
+Australia,3,sin símbolo puro,SAT,22,3,18,0,0.0
+Australia,3,sin cláusula unitaria,SAT,37,22,0,14,0.0
+Australia,3,solo backtracking,SAT,48,47,0,0,0.0
+EE. UU.,2,DPLL completo,UNSAT,17,2,14,0,0.001
+EE. UU.,2,sin símbolo puro,UNSAT,17,2,14,0,0.001
+EE. UU.,2,sin cláusula unitaria,UNSAT,345702,278260,0,67441,11.248
+EE. UU.,2,solo backtracking,UNSAT,545605,545604,0,0,16.261
+EE. UU.,3,DPLL completo,UNSAT,1125,48,1076,0,0.051
+EE. UU.,3,sin símbolo puro,UNSAT,1125,48,1076,0,0.054
+EE. UU.,3,sin cláusula unitaria,no termina,600001,463320,0,136680,14.936
+EE. UU.,3,solo backtracking,no termina,600001,600000,0,0,20.708
+EE. UU.,4,DPLL completo,SAT,208,25,182,0,0.011
+EE. UU.,4,sin símbolo puro,SAT,208,25,182,0,0.011
+EE. UU.,4,sin cláusula unitaria,no termina,600001,424631,0,175369,9.389
+EE. UU.,4,solo backtracking,no termina,600001,600000,0,0,25.623
