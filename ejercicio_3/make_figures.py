@@ -12,7 +12,8 @@ Lee results/*.csv (de run_experiments.py) y genera las figuras y tablas:
 Las figuras se guardan en .pdf, para incluirlas en LaTeX.
 Las rutas sobre el mapa las dibuja main.py.
 
-Cada algoritmo tiene siempre el mismo color (el de visualizar_terreno.py).
+En las graficas cada algoritmo tiene siempre el mismo color
+(COLOR_ALGORITMO, definido en visualizar_terreno.py).
 """
 
 import math
