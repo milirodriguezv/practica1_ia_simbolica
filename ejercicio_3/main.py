@@ -1,6 +1,8 @@
-"""
-main.py -- Ejercicio 3: agente planificador de rutas para un rover en
-Marte, resuelto con A* (busqueda informada).
+"""Ejercicio 3: agente planificador de rutas para un rover en Marte.
+
+Resuelto con A* (busqueda informada). Este archivo genera dos mapas, los
+guarda, deja que el agente los recorra con UCS, voraz, A*(h1) y A*(h2),
+y dibuja las cuatro rutas.
 
     parametros.py          -> constantes fisicas del rover (s, v_max, theta_max...)
     terrain.py             -> el entorno: generador de terreno + reglas de movimiento (Terreno)
@@ -12,9 +14,6 @@ Marte, resuelto con A* (busqueda informada).
     visualizar_terreno.py  -> dibuja mapas y rutas (nada de busqueda aqui)
     run_experiments.py     -> experimentos -> results/*.csv
     make_figures.py        -> figuras de la memoria -> figures/*.pdf
-
-Este archivo genera un mapa, lo guarda, deja que el agente
-lo recorra con UCS, voraz, A*(h1) y A*(h2), y dibuja las cuatro rutas.
 """
 
 from pathlib import Path
@@ -36,8 +35,16 @@ AGENTES = {
 
 
 def simular(agente, terreno, max_pasos=100_000):
-    """Bucle agente-entorno: percibir -> actuar hasta llegar a G (o no
-    poder). Devuelve las celdas por las que ha pasado el rover."""
+    """Bucle agente-entorno: percibir y actuar hasta llegar a G (o no poder).
+
+    Args:
+        agente: RoverAgent.
+        terreno: Terreno con inicio y objetivo.
+        max_pasos: Tope de pasos, por seguridad.
+
+    Returns:
+        Lista de celdas por las que ha pasado el rover.
+    """
     posicion = terreno.inicio
     recorrido = [posicion]
     for _ in range(max_pasos):
@@ -50,6 +57,15 @@ def simular(agente, terreno, max_pasos=100_000):
 
 
 def generar_y_dibujar(N, semilla):
+    """Genera un terreno, lo recorre con los cuatro algoritmos y dibuja las rutas.
+
+    Args:
+        N: Tamano del mapa (N x N celdas).
+        semilla: Semilla del generador de terreno.
+
+    Returns:
+        El Terreno generado.
+    """
     print(f"--- Terreno {N}x{N}, semilla {semilla} ---")
 
     params = ParametrosGenerador(N=N)

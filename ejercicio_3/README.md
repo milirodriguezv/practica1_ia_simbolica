@@ -1,42 +1,55 @@
-# Ejercicio 3 — Planificador de rutas para un rover en Marte con A*
+# Ejercicio 3: planificador de rutas para un rover en Marte con A*
 
-## Instalación
-
-```bash
-cd practica1_ia_simbolica
-python -m venv .venv
-.venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
-pip install -r requirements.txt # requirements.txt común a toda la práctica
-cd ejercicio_3                  # los comandos de abajo se ejecutan desde aquí
-```
+Un rover tiene que ir de una celda S a otra G por un terreno con cráteres y
+rocas, en el menor tiempo posible. El coste de cada paso es la distancia
+recorrida entre la velocidad a esa pendiente, así que subir cuesta más que
+bajar. El agente formula el problema, busca una ruta con A* y la ejecuta.
 
 ## Ejecución
 
-```bash
-python main.py                   # terrenos de ejemplo + rutas UCS/voraz/A* -> maps/*.npz, figures/*.pdf
-pytest tests                     # tests
-python run_experiments.py        # experimentos -> results/*.csv (unos minutos; --rapido para probar, o p.ej. voraz ida_y_vuelta)
-python make_figures.py           # figuras -> figures/*.pdf, tablas -> results/tabla_*.tex
+Desde esta carpeta, con el entorno de la práctica activado (ver el README de la raíz):
+
+```
+python main.py              # dos terrenos de ejemplo y las rutas de UCS, voraz y A*; salida en maps/ y figures/
+python run_experiments.py   # experimentos; resultados en results/ (unos minutos; --rapido para probar)
+python make_figures.py      # figuras en figures/ y tablas en results/ a partir de los CSV
+pytest tests                # tests
 ```
 
 ## Archivos
 
-| Archivo | Qué contiene |
+| Archivo | Contenido |
 |---|---|
-| `parametros.py` | Constantes físicas: `s`, `v_max`, `θ_max`, `k_sub`, `k_baj` |
-| `terrain.py` | Entorno: generador de terreno sintético + reglas de movimiento (`Terreno`) |
-| `visualizar_terreno.py` | Dibuja el mapa, las zonas prohibidas y las rutas |
-| `problem.py` | `RoverProblem`: formulación de búsqueda y modelo de coste `c = d / v(θ)` |
-| `heuristics.py` | `h0`, `h1` (euclídea), `h2` (octil) |
-| `search.py` | Primero-el-mejor genérica → UCS, voraz, A* |
+| `parametros.py` | Constantes físicas del rover |
+| `terrain.py` | Entorno: generador de terreno sintético y reglas de movimiento |
+| `problem.py` | Formulación del problema de búsqueda y modelo de coste |
+| `heuristics.py` | Heurísticas `h0`, `h1` (euclídea) y `h2` (octil) |
+| `search.py` | Búsqueda primero-el-mejor: UCS, voraz y A* |
 | `metrics.py` | Factor de ramificación efectivo `b*` |
-| `rover_agent.py` | Agente formular → buscar → ejecutar (replanifica si se desvía) |
-| `run_experiments.py` | Experimentos (heurísticas, voraz, ida y vuelta, pendiente máxima) → `results/*.csv` |
-| `make_figures.py` | Figuras (`figures/*.pdf`) y tablas LaTeX (`results/tabla_*.tex`) de la memoria |
-| `tests/` | Tests con pytest (terreno, problema, búsqueda, agente) |
+| `rover_agent.py` | Agente: formular, buscar y ejecutar; replanifica si se desvía |
+| `visualizar_terreno.py` | Dibujo de los mapas y las rutas |
+| `main.py` | Genera dos terrenos y dibuja las rutas de cada algoritmo |
+| `run_experiments.py` | Experimentos |
+| `make_figures.py` | Figuras y tablas a partir de los resultados |
+| `tests/` | Tests del terreno, el problema, la búsqueda y el agente |
 
-Carpetas de salida: `maps/` (mapas `.npz` reproducibles), `results/` (CSV), `figures/` (imágenes).
+## Experimentos
+
+| Experimento | Qué se mide | Salida |
+|---|---|---|
+| `heuristicas` | Nodos generados, expandidos y `b*` de UCS, A*(h1) y A*(h2) según la profundidad de la solución | `results/heuristicas.csv`, `figures/nodos_por_profundidad.pdf`, `results/tabla_b_estrella_*.tex` |
+| `voraz` | Tiempo de viaje que pierde la búsqueda voraz frente a A* y nodos que se ahorra | `results/voraz.csv`, `figures/voraz.pdf` |
+| `ida_y_vuelta` | Coste de ir de S a G frente a volver de G a S | `results/ida_y_vuelta.csv`, `figures/ida_y_vuelta.pdf` |
+| `pendiente_maxima` | Si sigue habiendo ruta, y cuánto se alarga, cuando el rover aguanta menos pendiente | `results/pendiente_maxima.csv`, `figures/pendiente_maxima.pdf` |
 
 ## Reproducibilidad
 
-Todos los mapas dependen de `(ParametrosGenerador, semilla)`; la misma pareja genera siempre el mismo terreno, `S` y `G`.
+Todos los mapas dependen de los parámetros del generador y de una semilla: la
+misma pareja genera siempre el mismo terreno, S y G. Los experimentos usan
+semillas fijas, así que volver a ejecutarlos da los mismos resultados salvo la
+columna de tiempo.
+
+## Código reutilizado
+
+`search.py` se basa en `best_first_search` de
+[aima-python](https://github.com/aimacode/aima-python).

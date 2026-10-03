@@ -1,8 +1,6 @@
-"""
-run_experiments.py
-------------------
-Experimentos del ejercicio 3. Cada uno escribe un CSV en results/
-(una fila por busqueda):
+"""Experimentos del ejercicio 3.
+
+Cada uno escribe un CSV en results/ (una fila por busqueda):
 
     heuristicas       UCS, A*(h1) y A*(h2) sobre muchos objetivos: nodos
                       generados, expandidos y b* frente a la profundidad d
@@ -64,11 +62,20 @@ PENDIENTES_MAXIMAS = [10, 15, 20, 25]
 
 
 def params_para(tipo="base"):
-    """Parametros del generador para cada tipo de terreno.
+    """Devuelve los parametros del generador para un tipo de terreno.
 
     base:    los valores por defecto, con 3 crateres en el mapa de 100 x 100.
     abrupto: el doble de crateres y un relieve base 3 veces mas alto
              (pendientes de hasta ~15-20 grados fuera de los crateres).
+
+    Args:
+        tipo: "base" o "abrupto".
+
+    Returns:
+        ParametrosGenerador.
+
+    Raises:
+        ValueError: Si el tipo no es ninguno de los dos.
     """
     n_crateres = max(1, round(12 * (N / 200) ** 2))
     if tipo == "base":
@@ -79,7 +86,15 @@ def params_para(tipo="base"):
 
 
 def fila_resultado(r):
-    """Columnas comunes de un ResultadoBusqueda."""
+    """Extrae las columnas comunes de un resultado de busqueda.
+
+    Args:
+        r: ResultadoBusqueda.
+
+    Returns:
+        Diccionario con coste, d, generados, expandidos, frontera_max,
+        b_estrella y tiempo.
+    """
     return {
         "coste": r.coste,
         "d": r.profundidad,
@@ -92,9 +107,19 @@ def fila_resultado(r):
 
 
 def objetivos_aleatorios(terreno, rng, k):
-    """k objetivos distintos elegidos al azar entre las celdas alcanzables
-    desde S. Al ser al azar, las distancias (y por tanto d) quedan
-    repartidas entre casi 0 y la diagonal del mapa."""
+    """Elige objetivos al azar entre las celdas alcanzables desde S.
+
+    Al ser al azar, las distancias (y por tanto d) quedan repartidas entre
+    casi 0 y la diagonal del mapa.
+
+    Args:
+        terreno: Terreno con inicio.
+        rng: Generador aleatorio de numpy.
+        k: Numero de objetivos.
+
+    Returns:
+        Lista de hasta k celdas (i, j) distintas.
+    """
     alcanzables = terreno.alcanzables_desde(terreno.inicio)
     alcanzables[terreno.inicio] = False
     celdas = np.argwhere(alcanzables)
@@ -103,6 +128,12 @@ def objetivos_aleatorios(terreno, rng, k):
 
 
 def guardar_csv(filas, nombre):
+    """Guarda una lista de filas en results/.
+
+    Args:
+        filas: Lista de diccionarios, todos con las mismas claves.
+        nombre: Nombre del archivo CSV.
+    """
     CARPETA_RESULTADOS.mkdir(exist_ok=True)
     ruta = CARPETA_RESULTADOS / nombre
     with open(ruta, "w", newline="", encoding="utf-8") as f:
@@ -113,6 +144,13 @@ def guardar_csv(filas, nombre):
 
 
 def progreso(texto, actual, total):
+    """Muestra el avance de un experimento en la misma linea.
+
+    Args:
+        texto: Descripcion de lo que se esta haciendo.
+        actual: Mapas ya procesados.
+        total: Mapas totales.
+    """
     print(f"\r  {texto}: {actual}/{total}", end="" if actual < total else "\n", flush=True)
 
 
@@ -122,7 +160,12 @@ def progreso(texto, actual, total):
 
 
 def heuristicas(n_mapas, objetivos_por_mapa):
-    """UCS, A*(h1) y A*(h2) sobre muchos pares (S, G) con d variado."""
+    """Compara UCS, A*(h1) y A*(h2) sobre muchos pares (S, G) con d variado.
+
+    Args:
+        n_mapas: Mapas por tipo de terreno.
+        objetivos_por_mapa: Objetivos aleatorios que se prueban en cada mapa.
+    """
     filas = []
     for tipo in TIPOS_TERRENO:
         for k in range(n_mapas):
@@ -140,7 +183,11 @@ def heuristicas(n_mapas, objetivos_por_mapa):
 
 
 def voraz(n_mapas):
-    """Voraz (h1 y h2) frente al optimo de A*(h2) en el mismo mapa."""
+    """Compara la voraz (h1 y h2) con el optimo de A*(h2) en el mismo mapa.
+
+    Args:
+        n_mapas: Mapas por tipo de terreno.
+    """
     filas = []
     for tipo in TIPOS_TERRENO:
         for k in range(n_mapas):
@@ -160,7 +207,11 @@ def voraz(n_mapas):
 
 
 def ida_y_vuelta(n_mapas):
-    """Coste optimo de ida (S -> G) y de vuelta (G -> S) con A*(h2)."""
+    """Compara el coste optimo de ida (S -> G) y de vuelta (G -> S).
+
+    Args:
+        n_mapas: Mapas por tipo de terreno.
+    """
     filas = []
     for tipo in TIPOS_TERRENO:
         for k in range(n_mapas):
@@ -182,11 +233,15 @@ def ida_y_vuelta(n_mapas):
 
 
 def pendiente_maxima(n_mapas):
-    """El mismo mapa, con el mismo S y G, para rovers que aguantan cada
-    vez menos pendiente. Con menos pendiente permitida hay mas paredes de
-    crater que no se pueden cruzar: la ruta se alarga o deja de existir.
+    """Repite la busqueda con rovers que aguantan menos pendiente.
 
+    El mismo mapa, con el mismo S y G, para rovers que aguantan cada vez
+    menos pendiente. Con menos pendiente permitida hay mas paredes de
+    crater que no se pueden cruzar: la ruta se alarga o deja de existir.
     La referencia es la ruta del rover del ejercicio (25 grados).
+
+    Args:
+        n_mapas: Mapas por tipo de terreno.
     """
     filas = []
     for tipo in TIPOS_TERRENO:
@@ -218,6 +273,7 @@ def pendiente_maxima(n_mapas):
 
 
 def main():
+    """Lee los argumentos y ejecuta los experimentos pedidos."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("experimentos", nargs="*",
                         default=["heuristicas", "voraz", "ida_y_vuelta", "pendiente_maxima"],

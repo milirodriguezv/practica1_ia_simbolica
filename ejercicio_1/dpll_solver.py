@@ -1,9 +1,7 @@
-"""
-DPLLSolver
-----------
-Implementa DPLL (Davis-Putnam-Logemann-Loveland), libro 4a ed. figura 7.17.
+"""Solver SAT con el algoritmo DPLL (Davis-Putnam-Logemann-Loveland).
 
-Idea general del algoritmo, en 4 pasos, en este orden de prioridad:
+Sigue la figura 7.17 del libro (4a ed.). Idea general del algoritmo, en
+4 pasos y en este orden de prioridad:
     1. Si ya no quedan clausulas, TODO se cumple; si alguna clausula se
        ha quedado vacia, ya es imposible cumplirla (terminacion anticipada).
     2. Si hay una clausula con un solo literal, ese valor esta obligado
@@ -44,6 +42,7 @@ class LimiteSuperado(Exception):
 
 @dataclass
 class Estadisticas:
+    """Contadores de lo que ha hecho el solver en una llamada a solve()."""
     llamadas: int = 0  # llamadas recursivas a _dpll
     decisiones: int = 0  # valores probados al ramificar (paso 4)
     propagaciones: int = 0  # asignaciones forzadas por clausula unitaria (paso 2)
@@ -54,7 +53,16 @@ class Estadisticas:
 
 
 def simplificar(clausulas, literal):
-    """Formula que queda al hacer 'literal' verdadero."""
+    """Devuelve la formula que queda al hacer verdadero un literal.
+
+    Args:
+        clausulas: Lista de clausulas (conjuntos de literales).
+        literal: Literal que pasa a ser verdadero.
+
+    Returns:
+        Lista nueva de clausulas: sin las que contienen el literal (ya se
+        cumplen) y con el literal contrario quitado de las demas.
+    """
     resultado = []
     for clausula in clausulas:
         if literal in clausula:
@@ -66,16 +74,19 @@ def simplificar(clausulas, literal):
 
 
 class DPLLSolver:
+    """Solver DPLL con contadores y con reglas que se pueden desactivar."""
 
     def __init__(self, usar_unitaria=True, usar_puro=True, max_llamadas=None):
-        """
+        """Crea el solver.
+
+        Con las dos reglas a False queda el backtracking basico: sigue siendo
+        correcto (la ramificacion prueba todo), pero explora mas.
+
         Args:
             usar_unitaria: Aplicar la regla de la clausula unitaria (paso 2).
             usar_puro: Aplicar la regla del simbolo puro (paso 3).
-            max_llamadas: Tope de llamadas recursivas. Si se supera se
-                lanza LimiteSuperado. None = sin tope.
-        Con las dos reglas a False queda el backtracking basico: sigue
-        siendo correcto (la ramificacion prueba todo), pero explora mas.
+            max_llamadas: Tope de llamadas recursivas. Si se supera se lanza
+                LimiteSuperado. None = sin tope.
         """
         self.usar_unitaria = usar_unitaria
         self.usar_puro = usar_puro
@@ -83,9 +94,20 @@ class DPLLSolver:
         self.estadisticas = Estadisticas()
 
     def solve(self, clauses):
-        """Punto de entrada. Devuelve una asignacion (variable -> bool) que
-        satisface 'clauses', o None si no existe ninguna (UNSAT). Las
-        variables que no hacen falta pueden quedar sin asignar."""
+        """Busca una asignacion que satisfaga todas las clausulas.
+
+        Args:
+            clauses: Lista de clausulas. Cada clausula es un conjunto de
+                enteros (3 = x3, -3 = no x3).
+
+        Returns:
+            Diccionario variable -> bool que satisface las clausulas, o None
+            si no existe ninguno (UNSAT). Las variables que no hacen falta
+            pueden quedar sin asignar.
+
+        Raises:
+            LimiteSuperado: Si se supera max_llamadas.
+        """
         self.estadisticas = Estadisticas()
         inicio = time.perf_counter()
         try:
@@ -96,6 +118,15 @@ class DPLLSolver:
         return resultado
 
     def _dpll(self, clausulas, asignacion):
+        """Paso recursivo de DPLL sobre la formula ya simplificada.
+
+        Args:
+            clausulas: Clausulas que quedan por satisfacer.
+            asignacion: Diccionario variable -> bool con lo asignado hasta ahora.
+
+        Returns:
+            La asignacion completa si esta rama lleva a una solucion, o None.
+        """
         self.estadisticas.llamadas += 1
         if self.max_llamadas is not None and self.estadisticas.llamadas > self.max_llamadas:
             raise LimiteSuperado()
@@ -136,8 +167,18 @@ class DPLLSolver:
         return None  # las dos ramas fallaron -> conflicto, retroceder
 
     def _asignar(self, clausulas, asignacion, literal):
-        """Hace 'literal' verdadero y sigue con la formula simplificada.
-        La asignacion se copia, asi cada rama del arbol tiene la suya."""
+        """Hace verdadero un literal y sigue con la formula simplificada.
+
+        La asignacion se copia, asi cada rama del arbol tiene la suya.
+
+        Args:
+            clausulas: Clausulas actuales.
+            asignacion: Asignacion actual (no se modifica).
+            literal: Literal que se hace verdadero.
+
+        Returns:
+            Lo que devuelva _dpll sobre la formula simplificada.
+        """
         nueva = dict(asignacion)
         nueva[abs(literal)] = literal > 0
         return self._dpll(simplificar(clausulas, literal), nueva)

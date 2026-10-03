@@ -1,12 +1,12 @@
-"""
-ABox de la ontologia: la carta del restaurante italiano.
+"""ABox de la ontologia: la carta del restaurante italiano.
 
 Aqui solo hay hechos concretos: que lleva cada ingrediente elaborado y
 que lleva cada plato. Las categorias dieteticas de cada plato no se
 escriben aqui: las calcula el razonador.
 
 "etiquetas_carta" es lo que el restaurante afirma en su carta impresa.
-Solo se usa para auditar la carta (experimento de auditoria), nunca para clasificar.
+Solo se usa para auditar la carta (experimento de auditoria), nunca para
+clasificar.
 
 Supuesto de mundo cerrado: la lista de componentes de cada plato es
 completa (si no aparece, el plato no lo lleva).

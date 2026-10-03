@@ -1,6 +1,5 @@
-"""
-Environment
------------
+"""Entorno del ejercicio: el mapa que hay que colorear.
+
 Representa el problema tal como existe "en el mundo real", fuera del
 agente: en este caso, el GRAFO que hay que colorear (regiones y sus
 adyacencias), mas los colores disponibles.
@@ -18,8 +17,17 @@ from graph_coloring import crear_variables, generar_clausulas
 
 
 class Environment:
+    """Mapa a colorear: regiones, fronteras y colores disponibles."""
 
     def __init__(self, regiones, adyacencias, colores):
+        """Crea el entorno.
+
+        Args:
+            regiones: Lista de nombres de region.
+            adyacencias: Lista de pares (region_a, region_b) que comparten
+                frontera.
+            colores: Lista de nombres de color disponibles.
+        """
         self.regiones = regiones
         self.adyacencias = adyacencias
         self.colores = colores
@@ -28,21 +36,28 @@ class Environment:
         self.variable_id = crear_variables(regiones, colores)
 
     def traducir_a_clausulas(self):
-        """
-        Convierte las reglas del grafo (vecinos con distinto color,
-        cada region con exactamente un color) a clausulas FNC.
-        Esto es lo unico que la KnowledgeBase va a recibir del entorno.
+        """Convierte las reglas del mapa a clausulas FNC.
+
+        Las reglas son: cada region tiene exactamente un color y dos vecinas
+        no comparten color. Esto es lo unico que la KnowledgeBase recibe del
+        entorno.
+
+        Returns:
+            Lista de clausulas (conjuntos de enteros).
         """
         return generar_clausulas(self.regiones, self.colores,
                                   self.adyacencias, self.variable_id)
 
     def goal_test(self, asignacion_de_variables):
-        """
-        Recibe una asignacion de VARIABLES (numeros -> True/False, tal
-        como la devuelve el DPLLSolver) y comprueba, desde el propio
-        entorno, si esa asignacion corresponde a un coloreado valido
-        del grafo: cada region con un color, y ningun par de vecinos
-        compartiendo color.
+        """Comprueba si una asignacion es un coloreado valido del mapa.
+
+        Args:
+            asignacion_de_variables: Diccionario variable -> bool, tal como lo
+                devuelve el DPLLSolver.
+
+        Returns:
+            True si cada region tiene un color y ningun par de vecinas
+            comparte color.
         """
         coloreado = self.decodificar(asignacion_de_variables)
 
@@ -57,9 +72,16 @@ class Environment:
         return True
 
     def decodificar(self, asignacion_de_variables):
-        """Traduce 'variable numero 7 = True' de vuelta a 'SA = Azul'.
-        Publico: main.py lo usa para mostrar el resultado en un
-        formato legible (nombre de region -> nombre de color)."""
+        """Traduce una asignacion de variables a un coloreado legible.
+
+        Por ejemplo, "variable 7 = True" pasa a ser "SA = Azul".
+
+        Args:
+            asignacion_de_variables: Diccionario variable -> bool.
+
+        Returns:
+            Diccionario region -> nombre de color.
+        """
         coloreado = {}
         for region in self.regiones:
             for color in self.colores:

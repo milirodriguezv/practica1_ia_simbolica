@@ -1,8 +1,7 @@
-"""
-experimentos.py
----------------
-Experimentos del ejercicio 1. Todos se hacen sobre los dos mapas del
-ejercicio (Australia y EE. UU.), no sobre formulas aleatorias:
+"""Experimentos del ejercicio 1 sobre los mapas de Australia y EE. UU.
+
+Todos se hacen sobre los dos mapas del ejercicio, no sobre formulas
+aleatorias:
 
     numero_cromatico      El agente pregunta con 2, 3, 4... colores hasta
                           que la respuesta es SAT. El ultimo UNSAT es la
@@ -49,10 +48,17 @@ MAX_LLAMADAS = 600_000
 
 
 def colorear(regiones, adyacencias, n_colores, solver=None):
-    """Lanza el agente sobre un mapa con n_colores.
+    """Lanza el agente sobre un mapa con un numero de colores.
 
-    Devuelve (hay_solucion, entorno, agente). Las estadisticas del solver
-    quedan en agente.solver.estadisticas.
+    Args:
+        regiones: Lista de regiones del mapa.
+        adyacencias: Lista de fronteras (pares de regiones).
+        n_colores: Numero de colores disponibles.
+        solver: DPLLSolver a usar. Si es None, el del agente por defecto.
+
+    Returns:
+        Tupla (hay_solucion, entorno, agente). Las estadisticas del solver
+        quedan en agente.solver.estadisticas.
     """
     entorno = Environment(regiones, adyacencias, COLORES[:n_colores])
     agente = LogicalAgent()
@@ -63,6 +69,12 @@ def colorear(regiones, adyacencias, n_colores, solver=None):
 
 
 def guardar_csv(filas, nombre):
+    """Guarda una lista de filas en results/.
+
+    Args:
+        filas: Lista de diccionarios, todos con las mismas claves.
+        nombre: Nombre del archivo CSV.
+    """
     CARPETA_RESULTADOS.mkdir(exist_ok=True)
     with open(CARPETA_RESULTADOS / nombre, "w", newline="", encoding="utf-8") as f:
         escritor = csv.DictWriter(f, fieldnames=list(filas[0]))
@@ -76,6 +88,11 @@ def guardar_csv(filas, nombre):
 # ---------------------------------------------------------------------
 
 def numero_cromatico():
+    """Busca el menor numero de colores con el que se puede pintar cada mapa.
+
+    El agente pregunta con 2, 3, 4... colores hasta que la respuesta es
+    SAT. Guarda una fila por pregunta en results/numero_cromatico.csv.
+    """
     filas = []
     for nombre, mapa in MAPAS.items():
         n_colores = 2
@@ -125,6 +142,11 @@ COLORES_VARIANTES = ["#4f6d8f", "#8fb58f", "#d9735a", "#ecc463"]
 
 
 def reglas_de_dpll():
+    """Resuelve cada caso con las cuatro variantes de DPLL.
+
+    Guarda una fila por caso y variante en results/reglas_dpll.csv y la
+    figura figures/reglas_dpll.pdf.
+    """
     filas = []
     for nombre, n_colores in CASOS:
         mapa = MAPAS[nombre]
@@ -156,8 +178,14 @@ def reglas_de_dpll():
 
 
 def figura_reglas_de_dpll(filas):
-    """Barras agrupadas: un grupo por caso y una barra por variante.
-    Las barras rayadas son las que se han cortado en MAX_LLAMADAS."""
+    """Dibuja las llamadas recursivas de cada variante en cada caso.
+
+    Barras agrupadas: un grupo por caso y una barra por variante. Las
+    barras rayadas son las que se han cortado en MAX_LLAMADAS.
+
+    Args:
+        filas: Filas generadas por reglas_de_dpll().
+    """
     figura, ejes = plt.subplots(figsize=(7.5, 3.8))
     ancho = 0.2
 
@@ -192,20 +220,40 @@ def figura_reglas_de_dpll(filas):
 # ---------------------------------------------------------------------
 
 def trozo_de_eeuu(estados):
-    """El mapa de EE. UU. reducido a unos pocos estados: devuelve sus
-    regiones y las fronteras que hay entre ellos."""
+    """Reduce el mapa de EE. UU. a unos pocos estados.
+
+    Args:
+        estados: Estados con los que quedarse.
+
+    Returns:
+        Tupla (regiones, fronteras) con esos estados y las fronteras que
+        hay entre ellos.
+    """
     estados = set(estados)
     fronteras = [(a, b) for a, b in EEUU["adyacencias"] if a in estados and b in estados]
     return sorted(estados), fronteras
 
 
 def se_puede_con_3_colores(estados):
+    """Pregunta al agente si un trozo de EE. UU. admite 3 colores.
+
+    Args:
+        estados: Estados que forman el trozo de mapa.
+
+    Returns:
+        True si existe un coloreado con 3 colores.
+    """
     regiones, fronteras = trozo_de_eeuu(estados)
     sat, _, _ = colorear(regiones, fronteras, 3)
     return sat
 
 
 def estados_conflictivos():
+    """Busca los estados que impiden pintar EE. UU. con 3 colores.
+
+    Guarda results/estados_conflictivos.csv y la figura
+    figures/estados_conflictivos.pdf.
+    """
     # 1) Un estado es "conflictivo" si el solo con sus vecinos ya no se
     #    puede pintar con 3 colores (pasa cuando lo rodea un numero impar
     #    de estados: el anillo necesita 3 colores y el del centro, un cuarto).

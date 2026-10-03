@@ -2,15 +2,15 @@
 
 | Plato | Tipo | SinGluten | Vegetariano | SinCarne | SinLactosa | Vegano |
 |---|---|---|---|---|---|---|
-| VitelTone | Entrante | ✓ | ✗ | ✗ | ✓ | ✗ |
-| BurrataConTomatesConfitados | Entrante | ✓ | ✓ | ✓ | ✗ | ✗ |
-| PizzaMozzarella | Principal | ✗ | ✓ | ✓ | ✗ | ✗ |
-| EspaguetisAlPomodoro | Principal | ✗ | ✓ | ✓ | ✓ | ✓ |
-| PastaCarbonara | Principal | ✗ | ✗ | ✗ | ✗ | ✗ |
-| EnsaladaRuculaPeraParmesano | Principal | ✓ | ✓ | ✓ | ✓ | ✗ |
-| SalmonConVerdurasAlHorno | Principal | ✓ | ✗ | ✓ | ✓ | ✗ |
-| Tiramisu | Postre | ✗ | ✓ | ✓ | ✗ | ✗ |
-| HeladoDePistacho | Postre | ✓ | ✓ | ✓ | ✗ | ✗ |
+| VitelTone | Entrante | Si | No | No | Si | No |
+| BurrataConTomatesConfitados | Entrante | Si | Si | Si | No | No |
+| PizzaMozzarella | Principal | No | Si | Si | No | No |
+| EspaguetisAlPomodoro | Principal | No | Si | Si | Si | Si |
+| PastaCarbonara | Principal | No | No | No | No | No |
+| EnsaladaRuculaPeraParmesano | Principal | Si | Si | Si | Si | No |
+| SalmonConVerdurasAlHorno | Principal | Si | No | Si | Si | No |
+| Tiramisu | Postre | No | Si | Si | No | No |
+| HeladoDePistacho | Postre | Si | Si | Si | No | No |
 
 ## Justificaciones (por que NO cumple)
 

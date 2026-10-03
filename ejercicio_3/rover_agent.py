@@ -1,6 +1,5 @@
-"""
-rover_agent.py
---------------
+"""Agente planificador del rover.
+
 Agente basado en objetivos que resuelve problemas mediante busqueda
 (libro 4a ed. seccion 3.1; Algoritmo "Agente planificador del rover" de
 la memoria). Mismo papel que logical_agent.py en el ejercicio 1:
@@ -26,6 +25,7 @@ from problem import RoverProblem
 
 
 class RoverAgent:
+    """Agente que formula el problema, busca un plan y lo ejecuta paso a paso."""
 
     def __init__(self, algoritmo, heuristica=None):
         """
@@ -42,12 +42,29 @@ class RoverAgent:
         self.busquedas = 0  # cuantas veces ha planificado (1 si nunca replanifica)
 
     def formular(self, terreno, posicion, objetivo):
-        """Traduce la situacion actual a un problema de busqueda."""
+        """Traduce la situacion actual a un problema de busqueda.
+
+        Args:
+            terreno: Terreno por el que se mueve el rover.
+            posicion: Celda (i, j) en la que esta.
+            objetivo: Celda (i, j) a la que quiere llegar.
+
+        Returns:
+            RoverProblem desde posicion hasta objetivo.
+        """
         return RoverProblem(terreno, inicio=posicion, objetivo=objetivo)
 
     def buscar(self, problema):
-        """Llama al algoritmo y convierte la ruta (celdas) en el plan
-        (acciones (di, dj)). Si no hay camino el plan queda vacio."""
+        """Llama al algoritmo y convierte la ruta en un plan de acciones.
+
+        Si no hay camino el plan queda vacio.
+
+        Args:
+            problema: RoverProblem a resolver.
+
+        Returns:
+            Lista de acciones (di, dj) para ir de S a G.
+        """
         if self.heuristica is None:
             self.resultado = self.algoritmo(problema)
         else:
@@ -59,8 +76,15 @@ class RoverAgent:
         return self.plan
 
     def __call__(self, percepcion):
-        """Devuelve la siguiente accion (di, dj), o None si ya esta en el
-        objetivo o no existe camino."""
+        """Decide la siguiente accion a partir de la percepcion.
+
+        Args:
+            percepcion: Tupla (terreno, posicion, objetivo).
+
+        Returns:
+            Accion (di, dj), o None si ya esta en el objetivo o no existe
+            camino.
+        """
         terreno, posicion, objetivo = percepcion
         if posicion == objetivo:
             self.plan = []

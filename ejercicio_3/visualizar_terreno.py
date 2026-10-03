@@ -1,6 +1,5 @@
-"""
-visualizar_terreno.py
----------------------
+"""Dibujo del terreno del rover y de las rutas.
+
 Dibuja el terreno del rover: mapa de calor de alturas, paredes de
 crater demasiado empinadas, rocas, S, G y (cuando existan) las rutas de
 cada algoritmo. Como visualizar_mapa.py del ejercicio 1, aqui no hay
@@ -43,8 +42,16 @@ COLOR_PARED = "#e9c46a"
 
 
 def _dibujar_fondo(ejes, terreno):
-    """Alturas + paredes > THETA_MAX + rocas. Devuelve la imagen de alturas
-    (para la barra de color) y las entradas de la leyenda."""
+    """Dibuja las alturas, las paredes demasiado empinadas y las rocas.
+
+    Args:
+        ejes: Ejes de matplotlib.
+        terreno: Terreno a dibujar.
+
+    Returns:
+        Tupla (imagen de alturas, entradas de la leyenda). La imagen sirve
+        para la barra de color.
+    """
     # alturas en gris, como los modelos de elevacion de HiRISE
     fondo = ejes.imshow(terreno.alturas, cmap="gray", origin="upper")
 
@@ -59,7 +66,15 @@ def _dibujar_fondo(ejes, terreno):
 
 
 def _dibujar_inicio_objetivo(ejes, terreno):
-    """Marca S y G. Devuelve sus entradas de la leyenda."""
+    """Marca S y G en el mapa.
+
+    Args:
+        ejes: Ejes de matplotlib.
+        terreno: Terreno con inicio y objetivo.
+
+    Returns:
+        Entradas de la leyenda para S y G.
+    """
     leyenda = []
     if terreno.inicio is not None:
         ejes.plot(terreno.inicio[1], terreno.inicio[0], "o", markersize=12,
@@ -75,6 +90,12 @@ def _dibujar_inicio_objetivo(ejes, terreno):
 
 
 def _guardar(figura, nombre_archivo):
+    """Guarda la figura en figures/ y la cierra.
+
+    Args:
+        figura: Figura de matplotlib.
+        nombre_archivo: Nombre del archivo de salida.
+    """
     CARPETA_FIGURAS.mkdir(exist_ok=True)
     ruta_salida = CARPETA_FIGURAS / nombre_archivo
     figura.savefig(ruta_salida, dpi=150, bbox_inches="tight")
@@ -83,10 +104,14 @@ def _guardar(figura, nombre_archivo):
 
 
 def dibujar_terreno(terreno, titulo, nombre_archivo, rutas=None):
-    """
-    terreno: objeto Terreno (terrain.py)
-    rutas:   opcional, diccionario nombre -> lista de celdas (i, j),
-             p.ej. {"A* (h2)": [...], "Voraz": [...]}
+    """Dibuja un mapa con todas las rutas superpuestas.
+
+    Args:
+        terreno: Terreno (terrain.py).
+        titulo: Titulo de la figura.
+        nombre_archivo: Nombre del archivo de salida.
+        rutas: Diccionario nombre -> lista de celdas (i, j), p. ej.
+            {"A* (h2)": [...], "Voraz (h2)": [...]}. Opcional.
     """
     rutas = rutas or {}
     figura, ejes = plt.subplots(figsize=(7, 7))
@@ -110,12 +135,17 @@ def dibujar_terreno(terreno, titulo, nombre_archivo, rutas=None):
 
 
 def dibujar_rutas_por_separado(terreno, titulo, nombre_archivo, rutas, expandidos=None, subtitulos=None):
-    """Un panel por algoritmo, en una rejilla de 2 columnas.
+    """Dibuja un panel por algoritmo, en una rejilla de 2 columnas.
 
-    rutas:      diccionario nombre -> lista de celdas (i, j)
-    expandidos: opcional, nombre -> celdas expandidas (orden_expansion),
-                que se sombrean para ver cuanto ha explorado cada algoritmo
-    subtitulos: opcional, nombre -> texto bajo el nombre (p.ej. coste y nodos)
+    Args:
+        terreno: Terreno (terrain.py).
+        titulo: Titulo de la figura.
+        nombre_archivo: Nombre del archivo de salida.
+        rutas: Diccionario nombre -> lista de celdas (i, j).
+        expandidos: Diccionario nombre -> celdas expandidas, que se
+            sombrean para ver cuanto ha explorado cada algoritmo. Opcional.
+        subtitulos: Diccionario nombre -> texto bajo el nombre (p. ej.
+            coste y nodos). Opcional.
     """
     expandidos = expandidos or {}
     subtitulos = subtitulos or {}

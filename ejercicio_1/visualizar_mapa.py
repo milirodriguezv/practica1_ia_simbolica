@@ -1,6 +1,5 @@
-"""
-visualizar_mapa.py
--------------------
+"""Dibujo de un mapa con el coloreado que encontro el agente.
+
 Dibuja un mapa (mapas.py) con el coloreado que encontro el
 LogicalAgent. No tiene nada que ver con la logica de SAT/DPLL -- es
 solo la parte grafica, totalmente separada (mismo principio de
@@ -24,11 +23,17 @@ COLOR_HEX = {
 
 
 def dibujar_solucion(coloreado, mapa, titulo, nombre_archivo, tamano=2200, margen=1.0):
-    """
-    coloreado: diccionario region -> nombre de color (ej: {"WA": "Rojo", ...})
-               puede ser None si el problema fue UNSAT
-    mapa:      diccionario de mapas.py (regiones, adyacencias, posiciones)
-    tamano:    area de cada circulo (puntos^2); margen: hueco alrededor
+    """Dibuja el mapa como un grafo coloreado y lo guarda en un archivo.
+
+    Args:
+        coloreado: Diccionario region -> nombre de color (p. ej.
+            {"WA": "Rojo"}). Puede ser None si el problema fue UNSAT; las
+            regiones sin color se pintan en gris.
+        mapa: Diccionario de mapas.py (regiones, adyacencias, posiciones).
+        titulo: Titulo de la figura.
+        nombre_archivo: Ruta del archivo de salida.
+        tamano: Area de cada circulo, en puntos al cuadrado.
+        margen: Hueco alrededor del mapa, en las unidades de las posiciones.
     """
     posiciones = mapa["posiciones"]
     figura, ejes = plt.subplots(figsize=(6, 6) if tamano >= 1000 else (10, 6))

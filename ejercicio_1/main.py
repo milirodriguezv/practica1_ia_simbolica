@@ -1,6 +1,7 @@
-"""
-main.py -- Ejercicio 1: agente logico + SAT solver aplicado a
-coloreado de grafos (mapas de Australia y de EE. UU.).
+"""Ejercicio 1: agente logico + SAT solver aplicado a colorear mapas.
+
+Resuelve Australia (2 y 3 colores) y EE. UU. (3 y 4 colores) y guarda
+los mapas coloreados en figures/.
 
     mapas.py               -> los datos: regiones, fronteras y posiciones
     environment.py         -> el problema real: el GRAFO (Environment)
@@ -23,6 +24,19 @@ COLORES = ["Rojo", "Verde", "Azul", "Amarillo"]
 
 
 def resolver_y_dibujar(nombre, mapa, n_colores, nombre_archivo_imagen, **dibujo):
+    """Colorea un mapa con el agente, imprime el resultado y lo dibuja.
+
+    Args:
+        nombre: Nombre del mapa, para los mensajes y el titulo.
+        mapa: Diccionario de mapas.py (regiones, adyacencias, posiciones).
+        n_colores: Numero de colores disponibles.
+        nombre_archivo_imagen: Ruta donde se guarda la imagen.
+        **dibujo: Opciones de dibujo que se pasan a dibujar_solucion
+            (tamano, margen).
+
+    Returns:
+        Diccionario region -> color, o None si no existe coloreado.
+    """
     colores = COLORES[:n_colores]
     print(f"--- {nombre} con {n_colores} colores ---")
 

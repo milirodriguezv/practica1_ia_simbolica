@@ -1,13 +1,13 @@
-"""
-TBox de la ontologia del restaurante italiano.
+"""TBox de la ontologia del restaurante italiano.
 
 Aqui solo hay conocimiento general: que es cada ingrediente y como se
 definen las categorias dieteticas. No aparece ningun plato concreto
 (los platos estan en carta.py).
 
 Notacion de logica descriptiva usada en la memoria:
-    A ⊑ B       "todo A es un B" (subclase)
-    ∀contiene.¬X  "todo lo que el plato contiene es no-X", que es lo mismo que "el plato no contiene nada que sea X"
+    A ⊑ B         "todo A es un B" (subclase)
+    ∀contiene.¬X  "todo lo que el plato contiene es no-X", que es lo
+                  mismo que "el plato no contiene nada que sea X"
 """
 
 

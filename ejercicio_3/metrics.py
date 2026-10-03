@@ -1,8 +1,7 @@
-"""
-metrics.py
-----------
-Factor de ramificacion efectivo b* (libro 4a ed. seccion 3.6.1, tabla de
-la figura 3.26 en las diapositivas): el b que cumple
+"""Factor de ramificacion efectivo b*.
+
+Definido en el libro (4a ed. seccion 3.6.1, tabla de la figura 3.26
+en las diapositivas) como el b que cumple
 
     N + 1 = 1 + b + b^2 + ... + b^d
 
@@ -51,6 +50,15 @@ def factor_ramificacion_efectivo(nodos_generados, profundidad, tolerancia=1e-6):
 
 
 def b_estrella(resultado):
-    """b* de un ResultadoBusqueda. Su contador 'generados' incluye S (la
-    raiz), asi que N = generados - 1."""
+    """Calcula b* a partir del resultado de una busqueda.
+
+    El contador 'generados' del resultado incluye S (la raiz), asi que
+    N = generados - 1.
+
+    Args:
+        resultado: ResultadoBusqueda de search.py.
+
+    Returns:
+        b*, o None si la solucion no tiene ningun paso.
+    """
     return factor_ramificacion_efectivo(resultado.generados - 1, resultado.profundidad)

@@ -1,8 +1,7 @@
-"""
-parametros.py
--------------
-Constantes fisicas del rover (Tabla "Parametros fisicos del modelo" de
-la memoria). Estan en un unico sitio porque las usan varios modulos:
+"""Constantes fisicas del rover.
+
+Corresponden a la tabla "Parametros fisicos del modelo" de la
+memoria. Estan en un unico sitio porque las usan varios modulos:
 
     - terrain.py    -> THETA_MAX y S_CELL, para decidir que movimientos
                        son factibles (pendiente, rocas)

@@ -1,6 +1,5 @@
-"""
-graph_coloring.py
-------------------
+"""Traduccion de "colorear un grafo" a clausulas FNC.
+
 Funciones puras que traducen "colorear un grafo" al lenguaje que
 entienden KnowledgeBase y DPLLSolver: una lista de clausulas FNC.
 
@@ -22,7 +21,15 @@ Reglas (clausulas) que hacen falta:
 
 
 def crear_variables(regiones, colores):
-    """Asigna un numero de variable distinto a cada par (region, color)."""
+    """Asigna un numero de variable distinto a cada par (region, color).
+
+    Args:
+        regiones: Lista de nombres de region.
+        colores: Lista de nombres de color.
+
+    Returns:
+        Diccionario (region, color) -> numero de variable, empezando en 1.
+    """
     variable_id = {}
     contador = 1
     for region in regiones:
@@ -33,6 +40,18 @@ def crear_variables(regiones, colores):
 
 
 def generar_clausulas(regiones, colores, adyacencias, variable_id):
+    """Genera las clausulas FNC del problema de coloreado.
+
+    Args:
+        regiones: Lista de nombres de region.
+        colores: Lista de nombres de color.
+        adyacencias: Lista de pares (region_a, region_b) vecinas.
+        variable_id: Diccionario (region, color) -> numero de variable.
+
+    Returns:
+        Lista de clausulas (conjuntos de enteros) con las tres reglas: al
+        menos un color, a lo sumo uno y vecinas con distinto color.
+    """
     clausulas = []
 
     # regla 1: cada region tiene al menos un color

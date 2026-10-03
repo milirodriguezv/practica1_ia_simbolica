@@ -1,6 +1,5 @@
-"""
-problem.py
-----------
+"""Formulacion del problema de busqueda del rover y modelo de coste.
+
 Formulacion del problema de busqueda (memoria, "Formulacion del
 problema de busqueda" y "Modelo de coste"), con la misma interfaz que
 la clase Problem del libro y de aima-python:
@@ -43,6 +42,7 @@ def velocidad(theta):
 
 
 class RoverProblem:
+    """Problema de busqueda: ir de una celda a otra en el menor tiempo."""
     def __init__(self, terreno, inicio=None, objetivo=None):
         """Crea el problema de busqueda sobre un terreno.
 

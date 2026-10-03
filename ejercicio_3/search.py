@@ -1,6 +1,5 @@
-"""
-search.py
----------
+"""Busqueda primero-el-mejor: UCS, voraz y A*.
+
 Busqueda primero-el-mejor generica en GRAFO (libro 4a ed. seccion 3.3.2,
 figura 3.7; basada en best_first_search de aima-python,
 https://github.com/aimacode/aima-python). Todos
@@ -17,7 +16,6 @@ Detalles de la implementacion:
     - guardar el mejor g por nodo y descartar entradas obsoletas al sacarlas
     - test objetivo AL EXPANDIR, no al generar
     - contar nodos generados, expandidos, tamano maximo de la frontera, tiempo
-
 """
 
 import heapq
@@ -29,6 +27,7 @@ from heuristics import h0
 
 @dataclass
 class ResultadoBusqueda:
+    """Ruta encontrada por una busqueda y sus contadores."""
     ruta: list = None  # lista de celdas de S a G (None si no hay solucion)
     coste: float = float("inf")  # tiempo total [s]
     generados: int = 0
@@ -39,6 +38,7 @@ class ResultadoBusqueda:
 
     @property
     def profundidad(self):
+        """Numero de pasos de la ruta (None si no hay ruta)."""
         return len(self.ruta) - 1 if self.ruta else None
 
 
@@ -115,16 +115,45 @@ def best_first_search(problema, h, peso_g=1.0, peso_h=1.0):
 
 
 def uniform_cost_search(problema):
-    """UCS: f = g. Sin heuristica (h0 = 0, asi que tampoco desempata)."""
+    """Busqueda de coste uniforme: f = g.
+
+    Sin heuristica (h0 = 0, asi que tampoco desempata).
+
+    Args:
+        problema: RoverProblem.
+
+    Returns:
+        ResultadoBusqueda con la ruta optima.
+    """
     return best_first_search(problema, h0, peso_g=1, peso_h=0)
 
 
 def greedy_search(problema, h):
-    """Voraz: f = h. Ignora el coste ya recorrido; rapida pero no optima."""
+    """Busqueda voraz: f = h.
+
+    Ignora el coste ya recorrido; es rapida pero no optima.
+
+    Args:
+        problema: RoverProblem.
+        h: Heuristica h(estado, problema).
+
+    Returns:
+        ResultadoBusqueda.
+    """
     return best_first_search(problema, h, peso_g=0, peso_h=1)
 
 
 def astar_search(problema, h):
-    """A*: f = g + h. Con h admisible es optima; con h consistente, ademas,
-    ninguna celda se expande dos veces."""
+    """Busqueda A*: f = g + h.
+
+    Con h admisible es optima; con h consistente, ademas, ninguna celda se
+    expande dos veces.
+
+    Args:
+        problema: RoverProblem.
+        h: Heuristica h(estado, problema).
+
+    Returns:
+        ResultadoBusqueda con la ruta optima.
+    """
     return best_first_search(problema, h, peso_g=1, peso_h=1)

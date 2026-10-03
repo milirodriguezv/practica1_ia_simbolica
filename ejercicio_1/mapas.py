@@ -1,7 +1,6 @@
-"""
-mapas.py
---------
-Los mapas (grafos) que colorea el agente. Solo datos, nada de logica.
+"""Los mapas (grafos) que colorea el agente.
+
+Solo datos, nada de logica.
 
 Cada mapa es un diccionario con:
     regiones:    lista de nombres
@@ -19,7 +18,14 @@ Cada mapa es un diccionario con:
 
 
 def aristas(vecinos):
-    """Lista de fronteras (a, b), con a < b, a partir de region -> vecinos."""
+    """Convierte un diccionario de vecinos en una lista de fronteras.
+
+    Args:
+        vecinos: Diccionario region -> lista de regiones vecinas.
+
+    Returns:
+        Lista ordenada de pares (a, b) con a < b, sin repetidos.
+    """
     return sorted({tuple(sorted((a, b))) for a, lista in vecinos.items() for b in lista})
 
 

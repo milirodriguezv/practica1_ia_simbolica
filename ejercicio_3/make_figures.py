@@ -1,6 +1,5 @@
-"""
-make_figures.py
----------------
+"""Figuras y tablas del ejercicio 3 a partir de los CSV.
+
 Lee results/*.csv (de run_experiments.py) y genera las figuras y tablas:
 
     figures/velocidad_pendiente.pdf    v(theta), para explicar el modelo de coste
@@ -58,6 +57,12 @@ plt.rcParams.update({
 
 
 def guardar(figura, nombre):
+    """Guarda una figura en figures/ como PDF y la cierra.
+
+    Args:
+        figura: Figura de matplotlib.
+        nombre: Nombre del archivo, sin extension.
+    """
     FIGURAS.mkdir(exist_ok=True)
     figura.savefig(FIGURAS / f"{nombre}.pdf", bbox_inches="tight")
     plt.close(figura)
@@ -69,7 +74,15 @@ DESPLAZAMIENTO = {"A* (h1)": 4, "A* (h2)": -4}
 
 
 def etiqueta_final(ejes, x, y, texto, color):
-    """Etiqueta directa al final de una linea (texto en tinta, marca en color)."""
+    """Pone una etiqueta directa al final de una linea.
+
+    Args:
+        ejes: Ejes de matplotlib.
+        x: Coordenada x del ultimo punto.
+        y: Coordenada y del ultimo punto.
+        texto: Texto de la etiqueta.
+        color: Color de la marca.
+    """
     ejes.plot(x, y, "o", color=color, markersize=5)
     ejes.annotate(texto, (x, y), xytext=(6, DESPLAZAMIENTO.get(texto, 0)), textcoords="offset points",
                   va="center", fontsize=9, color=TINTA)
@@ -79,7 +92,7 @@ def etiqueta_final(ejes, x, y, texto, color):
 
 
 def fig_velocidad():
-    """v(theta) / V_MAX: subir frena mas que bajar."""
+    """Dibuja v(theta) / V_MAX: subir frena mas que bajar."""
     grados = np.linspace(-math.degrees(THETA_MAX), math.degrees(THETA_MAX), 201)
     v = [velocidad(math.radians(g)) / V_MAX for g in grados]
 
@@ -103,14 +116,26 @@ MIN_CASOS = 5  # intervalos de d con menos casos no se muestran (poco fiables)
 
 
 def agrupar_por_d(df, ancho=20):
-    """Intervalos de d de 'ancho' pasos: [1, 20], [21, 40]..."""
+    """Agrupa las busquedas por intervalos de profundidad.
+
+    Args:
+        df: DataFrame con la columna d.
+        ancho: Pasos de cada intervalo: [1, 20], [21, 40]...
+
+    Returns:
+        Copia del DataFrame con la columna d_grupo (centro del intervalo).
+    """
     df = df.copy()
     df["d_grupo"] = ((df["d"] - 1) // ancho) * ancho + ancho / 2 + 0.5
     return df
 
 
 def fig_nodos_por_profundidad(heuristicas):
-    """Nodos expandidos frente a d: mediana y rango intercuartilico."""
+    """Dibuja los nodos expandidos frente a d: mediana y rango intercuartilico.
+
+    Args:
+        heuristicas: DataFrame de results/heuristicas.csv.
+    """
     heuristicas = agrupar_por_d(heuristicas)
     casos = heuristicas[heuristicas.algoritmo == "UCS"].groupby(["terreno", "d_grupo"]).size()
     validos = casos[casos >= MIN_CASOS].index
@@ -137,7 +162,14 @@ def fig_nodos_por_profundidad(heuristicas):
 
 
 def tabla_b_estrella(heuristicas, tipo):
-    """Tabla estilo figura 3.26: generados medios y b* medio por intervalo de d."""
+    """Escribe la tabla de nodos generados y b* medios por intervalo de d.
+
+    Tiene el mismo formato que la tabla de la figura 3.26 del libro.
+
+    Args:
+        heuristicas: DataFrame de results/heuristicas.csv.
+        tipo: Tipo de terreno ("base" o "abrupto").
+    """
     datos = agrupar_por_d(heuristicas[heuristicas.terreno == tipo])
     algoritmos = ["UCS", "A* (h1)", "A* (h2)"]
     media = datos.groupby(["d_grupo", "algoritmo"])[["generados", "b_estrella"]].mean().unstack()
@@ -169,7 +201,13 @@ def tabla_b_estrella(heuristicas, tipo):
 
 
 def fig_voraz(voraz):
-    """Dos graficas por terreno: tiempo de viaje extra medio y nodos expandidos medios."""
+    """Dibuja el tiempo de viaje extra y los nodos expandidos de la voraz.
+
+    Dos graficas por terreno, en vez de un doble eje.
+
+    Args:
+        voraz: DataFrame de results/voraz.csv.
+    """
     orden = ["A* (h2)", "Voraz (h2)", "Voraz (h1)"]
     figura, ejes_todos = plt.subplots(2, 2, figsize=(10, 4.2))
     for columna, (tipo, titulo) in enumerate(TERRENOS.items()):
@@ -198,7 +236,11 @@ def fig_voraz(voraz):
 
 
 def fig_ida_y_vuelta(ida_y_vuelta):
-    """Diferencia ida/vuelta (%) frente al desnivel S -> G."""
+    """Dibuja la diferencia ida/vuelta (%) frente al desnivel S -> G.
+
+    Args:
+        ida_y_vuelta: DataFrame de results/ida_y_vuelta.csv.
+    """
     figura, ejes_todos = plt.subplots(1, 2, figsize=(10, 3.8), sharey=True)
     for ejes, (tipo, titulo) in zip(ejes_todos, TERRENOS.items()):
         datos = ida_y_vuelta[ida_y_vuelta.terreno == tipo]
@@ -221,17 +263,31 @@ def fig_ida_y_vuelta(ida_y_vuelta):
 
 
 def mapas_con_ruta_siempre(datos):
-    """Filas de los mapas en los que hay ruta con todas las pendientes
-    maximas. Para comparar tiempos hay que usar siempre los mismos mapas;
-    si no, cada media saldria de un conjunto de mapas distinto."""
+    """Filtra los mapas en los que hay ruta con todas las pendientes maximas.
+
+    Para comparar tiempos hay que usar siempre los mismos mapas; si no,
+    cada media saldria de un conjunto de mapas distinto.
+
+    Args:
+        datos: DataFrame de results/pendiente_maxima.csv.
+
+    Returns:
+        Las filas de los mapas en los que todos los rovers llegan a G.
+    """
     siempre = datos.groupby(["terreno", "semilla"]).hay_ruta.transform("all")
     return datos[siempre]
 
 
 def fig_pendiente_maxima(datos):
-    """Izquierda: en cuantos mapas sigue habiendo ruta. Derecha: cuanto se
+    """Dibuja el efecto de la pendiente maxima del rover.
+
+    Izquierda: en cuantos mapas sigue habiendo ruta. Derecha: cuanto se
     alarga el viaje respecto al rover que aguanta 25 grados, en los mapas
-    en los que todos los rovers llegan."""
+    en los que todos los rovers llegan.
+
+    Args:
+        datos: DataFrame de results/pendiente_maxima.csv.
+    """
     comparables = mapas_con_ruta_siempre(datos)
     figura, (izquierda, derecha) = plt.subplots(1, 2, figsize=(10, 3.6))
     for tipo, titulo in TERRENOS.items():
@@ -260,7 +316,14 @@ def fig_pendiente_maxima(datos):
 
 
 def resumen(heuristicas, voraz, ida_y_vuelta, pendiente):
-    """Numeros clave para el texto de la memoria."""
+    """Imprime los numeros clave para el texto de la memoria.
+
+    Args:
+        heuristicas: DataFrame de results/heuristicas.csv.
+        voraz: DataFrame de results/voraz.csv.
+        ida_y_vuelta: DataFrame de results/ida_y_vuelta.csv.
+        pendiente: DataFrame de results/pendiente_maxima.csv.
+    """
     print("\nResumen:")
     exp = heuristicas.groupby(["terreno", "algoritmo"]).expandidos.mean().unstack()
     for tipo in TERRENOS:

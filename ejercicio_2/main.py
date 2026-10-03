@@ -1,8 +1,7 @@
-"""
-Experimentos
+"""Experimentos del ejercicio 2 sobre la carta del restaurante.
 
 Uso:
-    python main.py          -> ejecuta todos los experimentos
+    python main.py            -> ejecuta todos los experimentos
     python main.py auditoria  -> ejecuta solo ese experimento
 
 Experimentos: clasificacion, subsuncion, cambio_del_pecorino, consistencia,
@@ -34,7 +33,12 @@ CARPETA = "resultados"
 
 
 def guardar(nombre, lineas):
-    """Imprime las lineas y las guarda en resultados/<nombre>.md"""
+    """Imprime las lineas y las guarda en resultados/<nombre>.md.
+
+    Args:
+        nombre: Nombre del archivo, sin extension.
+        lineas: Lista de lineas de texto (Markdown).
+    """
     texto = "\n".join(lineas)
     print(texto)
     print()
@@ -45,6 +49,11 @@ def guardar(nombre, lineas):
 
 # Validacion de la ontologia
 def validacion():
+    """Valida la ontologia y la carta antes de razonar sobre ellas.
+
+    Returns:
+        True si no hay errores.
+    """
     lineas = ["# Validacion de la ontologia", ""]
     errores = razonador.validar_ontologia(ONTOLOGIA, CARTA)
     if len(errores) == 0:
@@ -69,6 +78,7 @@ def validacion():
 
 # Clasificacion de la carta
 def clasificacion():
+    """Clasifica todos los platos de la carta y justifica lo que no cumplen."""
     categorias = list(ONTOLOGIA["categorias"])
     lineas = ["# Clasificacion de la carta", ""]
 
@@ -81,9 +91,9 @@ def clasificacion():
         celdas = []
         for categoria in categorias:
             if categoria in cumple:
-                celdas.append("✓")
+                celdas.append("Si")
             else:
-                celdas.append("✗")
+                celdas.append("No")
         lineas.append(f"| {plato} | {datos['tipo']} | " + " | ".join(celdas) + " |")
 
         for categoria, violaciones in motivos.items():
@@ -100,6 +110,7 @@ def clasificacion():
 
 # Subsuncion entre categorias
 def subsuncion():
+    """Comprueba que categorias estan contenidas en otras."""
     lineas = ["# Subsuncion entre categorias (comparando definiciones)", ""]
     lineas.append("| C | D | ¿C ⊑ D? | Contraejemplo |")
     lineas.append("|---|---|---|---|")
@@ -121,6 +132,11 @@ def subsuncion():
 
 # Que pasa si cambia la TBox: el Pecorino sin lactosa
 def cambio_del_pecorino():
+    """Cambia un axioma de la TBox y mira que platos cambian de categoria.
+
+    El cambio es declarar el PecorinoRomano como queso curado sin lactosa.
+    La carta (ABox) no se toca.
+    """
     lineas = ["# Cambio en la TBox: el Pecorino como queso sin lactosa", ""]
     lineas.append("Cambio: declarar el PecorinoRomano como queso curado "
                   "sin lactosa (quitar PecorinoRomano ⊑ ConLactosa).")
@@ -149,6 +165,7 @@ def cambio_del_pecorino():
 
 # Consistencia de conceptos
 def consistencia():
+    """Comprueba si pueden existir platos con ciertas combinaciones."""
     # (categorias, clases que el plato debe contener)
     consultas = [
         (["Vegetariano"], ["Pescado"]),
@@ -179,6 +196,7 @@ def consistencia():
 # Auditoria de la carta
 # ------------------------------------------------------------------
 def auditoria():
+    """Compara las etiquetas impresas en la carta con lo que se infiere."""
     lineas = ["# Auditoria de las etiquetas de la carta", ""]
     discrepancias = razonador.auditar_carta(ONTOLOGIA, CARTA)
     if len(discrepancias) == 0:
@@ -207,8 +225,14 @@ AMARILLO_ACEITE = "#d9a400"
 
 
 def dibujar_carta(discrepancias):
-    """Tabla platos x categorias. El color de fondo es lo que infiere el
-    razonador y la palabra "carta" indica lo que dice la carta impresa."""
+    """Dibuja la tabla platos x categorias de la auditoria.
+
+    El color de fondo es lo que infiere el razonador y la palabra "carta"
+    indica lo que dice la carta impresa.
+
+    Args:
+        discrepancias: Lista devuelta por razonador.auditar_carta().
+    """
     platos = list(CARTA["platos"])
     categorias = list(ONTOLOGIA["categorias"])
     figura, ejes = plt.subplots(figsize=(7.2, 4.6))
@@ -271,9 +295,17 @@ CLIENTES = {
 
 
 def platos_aptos(categorias, tipo, segun_la_carta=False):
-    """Platos de un tipo (Entrante, Principal o Postre) que cumplen todas
-    las categorias. Con segun_la_carta=True se miran las etiquetas
-    impresas en la carta en vez de lo que infiere el razonador."""
+    """Busca los platos de un tipo que cumplen todas las categorias.
+
+    Args:
+        categorias: Categorias que debe cumplir el plato.
+        tipo: Tipo de plato (Entrante, Principal o Postre).
+        segun_la_carta: Si es True se miran las etiquetas impresas en la
+            carta en vez de lo que infiere el razonador.
+
+    Returns:
+        Lista de nombres de plato.
+    """
     aptos = []
     for plato, datos in CARTA["platos"].items():
         if datos["tipo"] != tipo:
@@ -288,9 +320,12 @@ def platos_aptos(categorias, tipo, segun_la_carta=False):
 
 
 def menus_para_clientes():
-    """Para cada cliente, que puede pedir de entrante, principal y postre,
-    y si le sale un menu completo. Ademas se avisa de los platos que la
-    carta impresa le ofreceria y que en realidad no puede comer."""
+    """Calcula que puede pedir cada tipo de cliente.
+
+    Para cada cliente, que puede pedir de entrante, principal y postre, y
+    si le sale un menu completo. Ademas se avisa de los platos que la
+    carta impresa le ofreceria y que en realidad no puede comer.
+    """
     tipos = ONTOLOGIA["tipos_plato"]
     lineas = ["# Menus para clientes con restricciones", ""]
     lineas.append("| Cliente | " + " | ".join(tipos) + " | ¿Menu completo? |")

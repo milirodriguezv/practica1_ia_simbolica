@@ -1,5 +1,4 @@
-"""
-Razonador sobre categorias para la ontologia del restaurante.
+"""Razonador sobre categorias para la ontologia del restaurante.
 
 Implementa las siguientes tareas de logica descriptiva:
 
@@ -28,6 +27,13 @@ def ancestros(clase, onto):
     Es el cierre reflexivo y transitivo de la relacion "es-un" (⊑).
     Funciona como un encadenamiento hacia delante: partimos de la clase
     y vamos anadiendo padres hasta que no aparece ninguno nuevo.
+
+    Args:
+        clase: Nombre de la clase.
+        onto: La TBox (diccionario ONTOLOGIA).
+
+    Returns:
+        Conjunto con la clase y todos sus ancestros.
     """
     taxonomia = onto["taxonomia"]
     encontrados = {clase}
@@ -42,7 +48,14 @@ def ancestros(clase, onto):
 
 
 def hojas(onto):
-    """Clases que no tienen subclases: los ingredientes atomicos."""
+    """Devuelve las clases que no tienen subclases: los ingredientes atomicos.
+
+    Args:
+        onto: La TBox.
+
+    Returns:
+        Conjunto de nombres de ingredientes atomicos.
+    """
     taxonomia = onto["taxonomia"]
     clases_con_hijos = set()
     for padres in taxonomia.values():
@@ -57,7 +70,15 @@ def hojas(onto):
 
 
 def hojas_bajo(clase, onto):
-    """Ingredientes atomicos que son de la clase indicada."""
+    """Devuelve los ingredientes atomicos que son de una clase.
+
+    Args:
+        clase: Nombre de la clase (p. ej. "Lacteo").
+        onto: La TBox.
+
+    Returns:
+        Conjunto de ingredientes atomicos que tienen esa clase como ancestro.
+    """
     resultado = set()
     for hoja in hojas(onto):
         if clase in ancestros(hoja, onto):
@@ -70,10 +91,20 @@ def hojas_bajo(clase, onto):
 def expandir(nombre, carta, ruta):
     """Baja por los ingredientes elaborados hasta los ingredientes atomicos.
 
-    Devuelve una lista de pares (ingrediente_atomico, ruta), donde la ruta
-    dice por donde se ha llegado. Por ejemplo:
+    La ruta dice por donde se ha llegado a cada ingrediente y sirve para
+    justificar despues los resultados. Por ejemplo:
         ("Leche", ["HeladoDePistacho", "BaseHelado"])
-    La ruta sirve para justificar despues los resultados.
+
+    Args:
+        nombre: Ingrediente atomico o elaborado.
+        carta: La ABox (diccionario CARTA).
+        ruta: Lista de nombres por los que se ha pasado hasta llegar aqui.
+
+    Returns:
+        Lista de pares (ingrediente_atomico, ruta).
+
+    Raises:
+        ValueError: Si un elaborado se contiene a si mismo (ciclo).
     """
     compuestos = carta["compuestos"]
 
@@ -93,7 +124,15 @@ def expandir(nombre, carta, ruta):
 
 
 def ingredientes_de_plato(plato, carta):
-    """Todos los ingredientes atomicos de un plato, con su ruta."""
+    """Devuelve todos los ingredientes atomicos de un plato, con su ruta.
+
+    Args:
+        plato: Nombre del plato.
+        carta: La ABox.
+
+    Returns:
+        Lista de pares (ingrediente_atomico, ruta).
+    """
     resultado = []
     for componente in carta["platos"][plato]["componentes"]:
         resultado = resultado + expandir(componente, carta, [plato])
@@ -103,7 +142,19 @@ def ingredientes_de_plato(plato, carta):
 # 3. Validacion de la ontologia (consistencia de la TBox y la ABox)
 
 def validar_ontologia(onto, carta):
-    """Devuelve una lista de errores. Si esta vacia, la ontologia es valida."""
+    """Comprueba la consistencia de la TBox y de la ABox.
+
+    Revisa que todos los padres esten definidos, que no haya ciclos, que
+    se respeten las clases disjuntas y las descomposiciones exhaustivas, y
+    que la carta solo use tipos, ingredientes y etiquetas que existen.
+
+    Args:
+        onto: La TBox.
+        carta: La ABox.
+
+    Returns:
+        Lista de mensajes de error. Si esta vacia, la ontologia es valida.
+    """
     errores = []
     taxonomia = onto["taxonomia"]
     todas_las_hojas = hojas(onto)
@@ -165,11 +216,21 @@ def validar_ontologia(onto, carta):
 # 4. Clasificacion (nivel de instancia: plato -> categorias)
 
 def comprobar_categoria(plato, categoria, onto, carta):
-    """¿El plato pertenece a la categoria?
+    """Comprueba si un plato pertenece a una categoria.
 
     Regla:  plato ∈ C  <=>  tiene al menos un ingrediente
                             y ninguno es de una clase prohibida F(C).
-    Devuelve (cumple, violaciones). Cada violacion explica por que no cumple.
+
+    Args:
+        plato: Nombre del plato.
+        categoria: Nombre de la categoria (p. ej. "SinGluten").
+        onto: La TBox.
+        carta: La ABox.
+
+    Returns:
+        Tupla (cumple, violaciones). Cada violacion es un diccionario con
+        el ingrediente, la ruta y la clase prohibida, y explica por que
+        el plato no cumple.
     """
     prohibidas = onto["categorias"][categoria]["prohibidas"]
     ingredientes = ingredientes_de_plato(plato, carta)
@@ -193,7 +254,17 @@ def comprobar_categoria(plato, categoria, onto, carta):
 
 
 def clasificar(plato, onto, carta):
-    """Devuelve (categorias_que_cumple, motivos_de_las_que_no_cumple)."""
+    """Clasifica un plato en todas las categorias de la ontologia.
+
+    Args:
+        plato: Nombre del plato.
+        onto: La TBox.
+        carta: La ABox.
+
+    Returns:
+        Tupla (categorias_que_cumple, motivos). motivos es un diccionario
+        categoria -> lista de violaciones, para las que no cumple.
+    """
     cumple = []
     motivos = {}
     for categoria in onto["categorias"]:
@@ -208,7 +279,15 @@ def clasificar(plato, onto, carta):
 # 5. Subsuncion (nivel de concepto: categoria ⊑ categoria)
 
 def prohibidas_cerradas(categoria, onto):
-    """F*(C): todos los ingredientes atomicos que la categoria no permite."""
+    """Calcula F*(C): los ingredientes atomicos que una categoria no permite.
+
+    Args:
+        categoria: Nombre de la categoria.
+        onto: La TBox.
+
+    Returns:
+        Conjunto de ingredientes atomicos prohibidos.
+    """
     prohibidas = onto["categorias"][categoria]["prohibidas"]
     resultado = set()
     for clase in prohibidas:
@@ -217,7 +296,7 @@ def prohibidas_cerradas(categoria, onto):
 
 
 def subsume(c, d, onto):
-    """¿C ⊑ D? Es decir, ¿todo plato posible de C es tambien de D?
+    """Comprueba si C ⊑ D, es decir, si todo plato posible de C es tambien de D.
 
     Subsuncion estructural: se comparan las DEFINICIONES, no los platos
     de la carta. Como toda categoria es "no contiene nada de F(C)":
@@ -231,8 +310,15 @@ def subsume(c, d, onto):
     esta ontologia: si se anade un ingrediente nuevo, el resultado puede
     cambiar (se ve en la practica con el Arroz y el experimento de consistencia).
 
-    Devuelve (True, None) o (False, contraejemplo). El contraejemplo es un
-    ingrediente h tal que el plato hipotetico {h} esta en C pero no en D.
+    Args:
+        c: Nombre de la categoria C.
+        d: Nombre de la categoria D.
+        onto: La TBox.
+
+    Returns:
+        (True, None) si C ⊑ D, o (False, contraejemplo). El contraejemplo
+        es un ingrediente h tal que el plato hipotetico {h} esta en C pero
+        no en D.
     """
     prohibidas_c = prohibidas_cerradas(c, onto)
     prohibidas_d = prohibidas_cerradas(d, onto)
@@ -244,7 +330,14 @@ def subsume(c, d, onto):
 
 
 def jerarquia_categorias(onto):
-    """Comprueba la subsuncion para todas las parejas de categorias."""
+    """Comprueba la subsuncion para todas las parejas de categorias.
+
+    Args:
+        onto: La TBox.
+
+    Returns:
+        Lista de diccionarios con las claves c, d, subsume y contraejemplo.
+    """
     resultados = []
     for c in onto["categorias"]:
         for d in onto["categorias"]:
@@ -259,13 +352,21 @@ def jerarquia_categorias(onto):
 # 6. Consistencia (¿puede existir un plato asi?)
 
 def es_satisfacible(categorias, requiere, onto):
-    """¿Existe algun plato que cumpla todas las `categorias` y que contenga
-    al menos un ingrediente de cada clase de `requiere`?
+    """Comprueba si puede existir un plato que cumpla un concepto.
 
-    Ejemplo: Vegetariano ⊓ ∃contiene.Pescado
-        -> es_satisfacible(["Vegetariano"], ["Pescado"], onto)
+    El concepto es: cumplir todas las `categorias` y contener al menos un
+    ingrediente de cada clase de `requiere`. Ejemplo:
 
-    Devuelve (True, plato_testigo) o (False, motivo).
+        Vegetariano ⊓ ∃contiene.Pescado
+            -> es_satisfacible(["Vegetariano"], ["Pescado"], onto)
+
+    Args:
+        categorias: Categorias que el plato debe cumplir.
+        requiere: Clases de las que el plato debe contener algo.
+        onto: La TBox.
+
+    Returns:
+        (True, plato_testigo) o (False, motivo).
     """
     # Ingredientes prohibidos por alguna de las categorias
     prohibidos = set()
@@ -306,6 +407,14 @@ def auditar_carta(onto, carta):
     (D ⊑ C y no C ⊑ D). Por ejemplo, un plato Vegetariano no necesita
     avisar tambien de que es SinCarne. Aqui se usa la subsuncion para
     razonar sobre la propia carta.
+
+    Args:
+        onto: La TBox.
+        carta: La ABox.
+
+    Returns:
+        Lista de discrepancias. Cada una es un diccionario con las claves
+        plato, categoria, tipo y motivo.
     """
     discrepancias = []
     for plato, datos in carta["platos"].items():
@@ -331,11 +440,19 @@ def auditar_carta(onto, carta):
 
 
 def implicada_por_otra(categoria, categorias_del_plato, onto):
-    """¿Hay otra categoria del plato estrictamente mas especifica que la implique?
+    """Comprueba si otra categoria del plato, mas especifica, ya implica esta.
 
     Se exige que sea ESTRICTAMENTE mas especifica: si dos categorias son
     equivalentes (C ⊑ D y D ⊑ C), cada una "implicaria" a la otra y no se
     avisaria de ninguna.
+
+    Args:
+        categoria: Categoria que se quiere comprobar.
+        categorias_del_plato: Categorias que cumple el plato.
+        onto: La TBox.
+
+    Returns:
+        True si alguna otra categoria del plato la implica.
     """
     for otra in categorias_del_plato:
         if otra == categoria:
@@ -350,6 +467,15 @@ def implicada_por_otra(categoria, categorias_del_plato, onto):
 # 8. Utilidad para mostrar justificaciones
 
 def texto_violacion(violacion):
-    """Ej.: 'Leche (HeladoDePistacho -> BaseHelado) es ConLactosa'."""
+    """Convierte una violacion en una frase legible.
+
+    Ejemplo: 'Leche (HeladoDePistacho -> BaseHelado) es ConLactosa'.
+
+    Args:
+        violacion: Diccionario con las claves ingrediente, ruta y clase.
+
+    Returns:
+        La frase que explica la violacion.
+    """
     ruta = " -> ".join(violacion["ruta"])
     return f"{violacion['ingrediente']} ({ruta}) es {violacion['clase']}"

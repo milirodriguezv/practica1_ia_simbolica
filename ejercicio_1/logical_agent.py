@@ -1,8 +1,6 @@
-"""
-LogicalAgent
-------------
-El agente basado en conocimiento (KB-Agent, Figura 7.1 de Russell &
-Norvig). Sigue el ciclo:
+"""Agente basado en conocimiento (KB-Agent).
+
+Corresponde a la Figura 7.1 de Russell & Norvig. Sigue el ciclo:
 
     TELL(KB, percepcion)
     accion <- ASK(KB, ...)
@@ -26,19 +24,38 @@ from dpll_solver import DPLLSolver
 
 
 class LogicalAgent:
+    """Agente que colorea un mapa con el ciclo TELL -> ASK."""
 
     def __init__(self):
         self.kb = KnowledgeBase()
         self.solver = DPLLSolver()
 
     def tell(self, clauses):
+        """Anota clausulas en la base de conocimiento.
+
+        Args:
+            clauses: Lista de clausulas (restricciones del problema).
+        """
         self.kb.tell_many(clauses) # anota muchas clausulas  (restricciones) a la vez en la BC
 
     def ask(self):
+        """Pregunta a la base de conocimiento si hay solucion.
+
+        Returns:
+            La asignacion encontrada (variable -> bool) o None.
+        """
         return self.kb.ask(self.solver)
 
     def run(self, environment):
-        """Ejecuta un ciclo completo del agente sobre un entorno."""
+        """Ejecuta un ciclo completo del agente sobre un entorno.
+
+        Args:
+            environment: Environment con el mapa a colorear.
+
+        Returns:
+            La asignacion de variables si existe un coloreado valido (y pasa
+            el goal_test del entorno), o None si es UNSAT.
+        """
         clausulas_traducidas = environment.traducir_a_clausulas()
         self.tell(clausulas_traducidas)
 
